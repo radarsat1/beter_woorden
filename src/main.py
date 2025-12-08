@@ -244,7 +244,7 @@ def get_exercises():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM daily_exercises ORDER BY created_at DESC LIMIT 5")
+    cursor.execute("SELECT * FROM daily_exercises ORDER BY created_at DESC LIMIT 1")
     rows = cursor.fetchall()
     conn.close()
 
