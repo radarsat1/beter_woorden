@@ -83,6 +83,9 @@ def pick_article_node(state: AgentState):
 
 def scrape_content_node(state: AgentState):
     """Downloads the specific article text."""
+    if state.get("error"):
+        return {"article_text": None}
+
     print(f"--- Step 2: Scraping {state['article_url']} ---")
     try:
         response = httpx.get(state['article_url'])
@@ -123,14 +126,13 @@ def generate_exercises_node(state: AgentState):
     CONTEXT ARTICLE:
     {article_text}
 
-    TARGET WORDS TO INCLUDE (if possible, otherwise select relevant words from text):
+    TARGET WORDS TO INCLUDE (try to use at least 5):
     {suggested_words}
 
     TASK:
-    1. Extract or create 20 simplified sentences based on the context of the article.
-    2. For at least 5 sentences, try to use the 'Target Words' provided.
-    3. For the rest, select a word that is self-evident from context (noun, verb, or preposition).
-    4. Respond ONLY with a valid JSON list.
+    1. Extract or create 20 simplified sentences based on the context.
+    2. Highlight one word per sentence that is self-evident from context.
+    3. Respond ONLY with a valid JSON list.
 
     FORMAT EXAMPLE:
     [
@@ -153,11 +155,11 @@ def generate_exercises_node(state: AgentState):
 
 def save_to_db_node(state: AgentState):
     """Saves the final result to the business database."""
+    if state.get("error") or not state.get("exercises"):
+        print(f"Skipping save due to error: {state.get('error')}")
+        return {}
+
     print("--- Step 4: Saving to Database ---")
-
-    if not state.get("exercises"):
-        return {"error": "No exercises generated to save."}
-
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
