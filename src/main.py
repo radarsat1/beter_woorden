@@ -24,6 +24,8 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 DB_PATH = "daily_dutch.db"
 CHECKPOINT_DB_PATH = "workflow_state.db"
 
+NUM_SENTENCES = 20
+
 # --- DATABASE SETUP (Business Logic) ---
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -126,17 +128,20 @@ def generate_exercises_node(state: AgentState):
     CONTEXT ARTICLE:
     {article_text}
 
-    TARGET WORDS TO INCLUDE (try to use at least 5):
+    TARGET WORDS TO INCLUDE:
     {suggested_words}
 
     TASK:
-    1. Extract or create 20 simplified sentences based on the context.
-    2. Highlight one word per sentence that is self-evident from context.
-    3. Respond ONLY with a valid JSON list.
+    1. Extract or create {num_sentences} simplified sentences based on the context. Try to
+       include the target words in at least {subset_sentences} of the {num_sentences} sentences.
+    2. Choose one word per sentence that is self-evident from context, again focusing on
+       the target words as much as possible.
+    3. Include a field with the English translation.
+    4. Respond ONLY with a valid JSON list.
 
     FORMAT EXAMPLE:
     [
-      {{"sentence": "Het schrijven van een brief is een lastige klus.", "word": "klus"}},
+      {{"sentence": "Het schrijven van een brief is een lastige klus.", "word": "klus", "english", "Writing a letter is a difficult task."}},
       ...
     ]
     """
@@ -147,7 +152,9 @@ def generate_exercises_node(state: AgentState):
     try:
         result = chain.invoke({
             "article_text": state['article_text'],
-            "suggested_words": ", ".join(state['suggested_words'])
+            "suggested_words": ", ".join(state['suggested_words']),
+            "num_sentences": NUM_SENTENCES,
+            "subset_sentences": int(NUM_SENTENCES * 3 // 4),
         })
         return {"exercises": result}
     except Exception as e:
