@@ -265,6 +265,50 @@ def get_exercises():
         })
     return results
 
+class ResultsPayload(BaseModel):
+    results: List[int]
+
+@app.post("/results")
+def accept_results(payload: ResultsPayload):
+    """Accept results measured by an external script and store in a separate history table."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # 1. Ensure the separate attempts table exists
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_attempts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            exercise_id INTEGER,
+            results_json TEXT,
+            attempted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(exercise_id) REFERENCES daily_exercises(id)
+        )
+    """)
+    conn.commit()
+
+    # 2. Find the ID of the latest exercise (the one the CLI just finished)
+    cursor.execute("SELECT id FROM daily_exercises ORDER BY created_at DESC LIMIT 1")
+    latest_row = cursor.fetchone()
+
+    if latest_row:
+        exercise_id = latest_row['id']
+        results_str = json.dumps(payload.results)
+
+        # 3. Insert the new attempt record
+        cursor.execute(
+            "INSERT INTO user_attempts (exercise_id, results_json) VALUES (?, ?)",
+            (exercise_id, results_str)
+        )
+        conn.commit()
+        status = "success"
+    else:
+        status = "error: no exercises found to link results to"
+
+    conn.close()
+
+    return {"result": status}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
