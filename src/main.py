@@ -7,18 +7,19 @@ from typing import List, TypedDict, Optional, Annotated
 from datetime import datetime
 from bs4 import BeautifulSoup
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel
 
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
+
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.sqlite import SqliteSaver
 
 # --- CONFIGURATION ---
-# Ensure you have OPENAI_API_KEY in your environment variables
-# os.environ["OPENAI_API_KEY"] = "sk-..."
+# Ensure you have GOOGLE_API_KEY in your environment variables
+# os.environ["GOOGLE_API_KEY"] = "AIza..."
 
 DB_PATH = "daily_dutch.db"
 CHECKPOINT_DB_PATH = "workflow_state.db"
@@ -103,10 +104,16 @@ def scrape_content_node(state: AgentState):
         return {"error": str(e)}
 
 def generate_exercises_node(state: AgentState):
-    """Calls LLM to generate the JSON exercises."""
-    print("--- Step 3: Generating Exercises with LLM ---")
+    """Calls Gemini to generate the JSON exercises."""
+    if state.get("error") or not state.get("article_text"):
+        return {"exercises": None}
 
-    llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
+    print("--- Step 3: Generating Exercises with Gemini ---")
+
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        temperature=0.7
+    )
 
     parser = JsonOutputParser()
 
