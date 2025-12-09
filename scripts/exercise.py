@@ -15,7 +15,7 @@ RESULTS_URL = f"{BASE_URL}/results"
 
 WORD_BANK_INTERVAL = 5  # Show word bank every N questions
 
-console = Console()
+console = Console(color_system='truecolor')
 
 def get_latest_exercises():
     try:
