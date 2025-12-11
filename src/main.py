@@ -60,11 +60,13 @@ class TriggerRequest(BaseModel):
     suggested_words: List[str] = ["bezig", "afhankelijk", "gereedschap", "omgaan", "ondanks"]
 
 # --- LANGGRAPH STATE ---
-class AgentState(TypedDict):
-    suggested_words: List[str]
+class Exercises(TypedDict):
     article_url: Optional[str]
-    article_text: Optional[str]
     exercises: Optional[List[dict]]
+
+class AgentState(Exercises):
+    suggested_words: List[str]
+    article_text: Optional[str]
     error: Optional[str]
 
 # --- NODE FUNCTIONS ---
@@ -171,7 +173,7 @@ def generate_exercises_node(state: AgentState):
     except Exception as e:
         return {"error": str(e)}
 
-def save_to_db_node(state: AgentState):
+def save_to_db_node(state: Exercises):
     """Saves the final result to the business database."""
     if state.get("error") or not state.get("exercises"):
         print(f"Skipping save due to error: {state.get('error')}")
@@ -275,6 +277,11 @@ def get_exercises():
             "exercises": json.loads(row["exercises_json"])
         })
     return results
+
+@app.put("/exercises")
+def put_exercises(exercises: Exercises):
+    """Receive a set of exercises and add to the DB"""
+    return save_to_db_node(exercises)
 
 class ResultsPayload(BaseModel):
     results: List[int]
