@@ -7,33 +7,226 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
-  }
   public: {
     Tables: {
-      todos: {
+      quiz_attempts: {
         Row: {
+          attempt: string | null
+          created_at: string
           id: number
-          inserted_at: string
-          is_complete: boolean | null
-          task: string | null
+          is_correct: boolean | null
+          question_id: number
+          session_id: number
           user_id: string
         }
         Insert: {
+          attempt?: string | null
+          created_at?: string
           id?: number
-          inserted_at?: string
-          is_complete?: boolean | null
-          task?: string | null
+          is_correct?: boolean | null
+          question_id: number
+          session_id: number
           user_id: string
         }
         Update: {
+          attempt?: string | null
+          created_at?: string
           id?: number
-          inserted_at?: string
-          is_complete?: boolean | null
-          task?: string | null
+          is_correct?: boolean | null
+          question_id?: number
+          session_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_attempts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_questions: {
+        Row: {
+          english: string | null
+          id: number
+          question: string
+          question_order: number | null
+          quiz_id: number
+          word: string
+        }
+        Insert: {
+          english?: string | null
+          id?: number
+          question: string
+          question_order?: number | null
+          quiz_id: number
+          word: string
+        }
+        Update: {
+          english?: string | null
+          id?: number
+          question?: string
+          question_order?: number | null
+          quiz_id?: number
+          word?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_questions_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_sessions: {
+        Row: {
+          created_at: string
+          id: number
+          quiz_id: number
+          score: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          quiz_id: number
+          score?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          quiz_id?: number
+          score?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_sessions_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_word_lists: {
+        Row: {
+          quiz_id: number
+          word_list_id: number
+        }
+        Insert: {
+          quiz_id: number
+          word_list_id: number
+        }
+        Update: {
+          quiz_id?: number
+          word_list_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_word_lists_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_word_lists_word_list_id_fkey"
+            columns: ["word_list_id"]
+            isOneToOne: false
+            referencedRelation: "word_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quizzes: {
+        Row: {
+          article_title: string | null
+          article_url: string | null
+          created_at: string
+          id: number
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          article_title?: string | null
+          article_url?: string | null
+          created_at?: string
+          id?: number
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          article_title?: string | null
+          article_url?: string | null
+          created_at?: string
+          id?: number
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      word_list_entries: {
+        Row: {
+          created_at: string
+          id: number
+          user_id: string
+          word: string
+          word_list_id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          user_id: string
+          word: string
+          word_list_id: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          user_id?: string
+          word?: string
+          word_list_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "word_list_entries_word_list_id_fkey"
+            columns: ["word_list_id"]
+            isOneToOne: false
+            referencedRelation: "word_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      word_lists: {
+        Row: {
+          created_at: string
+          id: number
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          name?: string
           user_id?: string
         }
         Relationships: []
@@ -176,3 +369,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

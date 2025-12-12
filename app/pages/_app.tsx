@@ -1,4 +1,4 @@
-import '@/styles/app.css'
+import '@/styles/globals.css'
 import type { AppProps } from 'next/app'
 import { AuthProvider } from '@/components/AuthProvider' // Import your new provider
 
