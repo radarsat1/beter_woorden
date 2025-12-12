@@ -1,12 +1,11 @@
-import { supabase } from '@/lib/initSupabase'
 import '@/styles/app.css'
-import { SessionContextProvider } from '@supabase/auth-helpers-react'
 import type { AppProps } from 'next/app'
+import { AuthProvider } from '@/components/AuthProvider' // Import your new provider
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
-    <SessionContextProvider supabaseClient={supabase}>
+    <AuthProvider>
       <Component {...pageProps} />
-    </SessionContextProvider>
+    </AuthProvider>
   )
 }

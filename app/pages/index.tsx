@@ -1,11 +1,18 @@
 import Head from 'next/head'
-import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react'
-import { Auth, ThemeSupa } from '@supabase/auth-ui-react'
+import { supabase } from '@/utils/supabase'
+//import { Auth } from '@supabase/auth-ui-react'
+import { ThemeSupa } from '@supabase/auth-ui-shared'
 import TodoList from '@/components/TodoList'
+import { useAuth } from '@/components/AuthProvider'
+
+import dynamic from 'next/dynamic'
+const Auth = dynamic(
+  () => import('@supabase/auth-ui-react').then((mod) => mod.Auth),
+  { ssr: false }
+)
 
 export default function Home() {
-  const session = useSession()
-  const supabase = useSupabaseClient()
+  const { user, loading } = useAuth()
 
   return (
     <>
@@ -16,7 +23,7 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <div className="w-full h-full bg-200">
-        {!session ? (
+        {(!user || loading) ? (
           <div className="min-w-full min-h-screen flex items-center justify-center">
             <div className="w-full h-full flex justify-center items-center p-4">
               <div className="w-full h-full sm:h-auto sm:w-2/5 max-w-sm p-5 bg-white shadow flex flex-col text-base">
@@ -32,7 +39,7 @@ export default function Home() {
             className="w-full h-full flex flex-col justify-center items-center p-4"
             style={{ minWidth: 250, maxWidth: 600, margin: 'auto' }}
           >
-            <TodoList session={session} />
+            <TodoList/>
             <button
               className="btn-black w-full mt-12"
               onClick={async () => {

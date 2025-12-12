@@ -1,16 +1,21 @@
+'use client'
+
 import { Database } from '@/lib/schema'
-import { Session, useSupabaseClient } from '@supabase/auth-helpers-react'
+import { supabase } from '@/utils/supabase'
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/components/AuthProvider'
 
 type Todos = Database['public']['Tables']['todos']['Row']
 
-export default function TodoList({ session }: { session: Session }) {
-  const supabase = useSupabaseClient<Database>()
+export default function TodoList() {
+  const { user, loading } = useAuth()
+
+  if (loading) return <div>Loading...</div>
+  if (!user) return <div>Please login</div>
+
   const [todos, setTodos] = useState<Todos[]>([])
   const [newTaskText, setNewTaskText] = useState('')
   const [errorText, setErrorText] = useState('')
-
-  const user = session.user
 
   useEffect(() => {
     const fetchTodos = async () => {
@@ -24,7 +29,10 @@ export default function TodoList({ session }: { session: Session }) {
     }
 
     fetchTodos()
-  }, [supabase])
+  }, [])
+
+  if (loading) return <div>Loading...</div>
+  if (!user) return <div>Please log in</div>
 
   const addTodo = async (taskText: string) => {
     let task = taskText.trim()
@@ -90,7 +98,6 @@ export default function TodoList({ session }: { session: Session }) {
 }
 
 const Todo = ({ todo, onDelete }: { todo: Todos; onDelete: () => void }) => {
-  const supabase = useSupabaseClient<Database>()
   const [isCompleted, setIsCompleted] = useState(todo.is_complete)
 
   const toggle = async () => {

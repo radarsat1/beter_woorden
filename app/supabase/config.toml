@@ -80,3 +80,14 @@ port = 54324
 # pop3_port = 54326
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
+
+[functions.generate-quiz]
+enabled = true
+verify_jwt = true
+import_map = "./functions/generate-quiz/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/generate-quiz/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/generate-quiz/*.html" ]
