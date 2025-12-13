@@ -63,6 +63,13 @@ export default function WordListEditor() {
       setNewWord('')
     }
   }
+
+  const removeWord = async (w_id) => {
+    if (!user || !selectedListId) return;
+    const { data, error } = await supabase.from('word_list_entries').delete().eq('id', w_id);
+
+    fetchEntries(selectedListId)
+  }
   
   const activeList = lists.find(l => l.id === selectedListId)
 
@@ -115,7 +122,9 @@ export default function WordListEditor() {
             <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
               <ul className="divide-y divide-gray-100">
                 {entries.map(w => (
-                  <li key={w.id} className="px-6 py-4 hover:bg-gray-50 transition-colors text-gray-700">{w.word}</li>
+                  <li key={w.id} className="px-6 py-4 hover:bg-gray-50 transition-colors text-gray-700">{w.word}
+                        <span class="text-gray-400 hover:text-black text-lg float-right cursor-pointer" onClick={e => { e.preventDefault(); removeWord(w.id) }}>☒</span>
+                  </li>
                 ))}
                 {entries.length === 0 && <li className="px-6 py-8 text-center text-gray-400 italic">No words in this list yet.</li>}
               </ul>
