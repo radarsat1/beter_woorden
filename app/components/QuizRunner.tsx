@@ -249,7 +249,7 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
             autoCorrect="off"
             autoCapitalize="off"
           />
-          <button type="submit" className="bg-blue-600 text-white px-8 py-4 rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"></button>
+          <button type="submit" className="bg-blue-600 text-white px-8 py-4 rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">Submit</button>
         </form>
       </div>
     </div>

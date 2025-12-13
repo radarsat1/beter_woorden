@@ -47,6 +47,17 @@ export default function QuizList({ onSelectQuiz }: QuizListProps) {
     const user = (await supabase.auth.getUser()).data.user
     if (!user) return
 
+    // Needed for calling API
+    const jwt = (await supabase.auth.getSession()).data.session.access_token
+    if (!jwt) return
+
+    // Get words
+    const { data: wordData, error: qError1 } = await supabase
+      .from('word_list_entries')
+      .select('word')
+      .in('word_list_id', selectedLists)
+    const words = wordData.map(i => i.word)
+
     // 1. Create Quiz
     const { data: quiz, error: qError } = await supabase
       .from('quizzes')
@@ -72,33 +83,24 @@ export default function QuizList({ onSelectQuiz }: QuizListProps) {
       )
     }
 
-
-    // 2. Create Stub Questions
-    const stubQuestions = [
-      {
-        quiz_id: quiz.id,
-        question: 'De ___ zit op de mat.',
-        word: 'kat',
-        english: 'The cat sits on the mat.',
-        question_order: 1
-      },
-      {
-        quiz_id: quiz.id,
-        question: 'Ik heb een ___ fiets.',
-        word: 'nieuwe',
-        english: 'I have a new bicycle.',
-        question_order: 2
-      },
-      {
-        quiz_id: quiz.id,
-        question: 'Hij ___ naar school.',
-        word: 'loopt',
-        english: 'He walks to school.',
-        question_order: 3
+    const questions_response = await fetch(
+      'http://127.0.0.1:54321/functions/v1/generate-quiz', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + jwt,
+        },
+        body: JSON.stringify({
+          suggestedWords: words
+        })
       }
-    ]
+    )
+    const { questions } = await questions_response.json()
+    const qsForInsert = questions.map(
+      (q, i) => ({ ...q, quiz_id: quiz.id, question_order: i+1})
+    )
 
-    await supabase.from('quiz_questions').insert(stubQuestions)
+    await supabase.from('quiz_questions').insert(qsForInsert)
 
     await fetchQuizzes()
     setGenerating(false)
@@ -145,7 +147,7 @@ export default function QuizList({ onSelectQuiz }: QuizListProps) {
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="font-bold text-xl text-gray-900 mb-1">{quiz.article_title || 'Untitled Quiz'}</h3>
-                <p className="text-sm text-gray-500">{new Date(quiz.created_at).toLocaleDateString()}</p>
+              <p className="text-sm text-gray-500">{new Date(quiz.created_at).toLocaleDateString()}</p>
                 
                 {sessions.length > 0 && (
                   <div className="mt-4">
