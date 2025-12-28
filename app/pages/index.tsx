@@ -36,7 +36,7 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Daily Dutch</title>
+        <title>Beter Woorden</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
@@ -46,7 +46,7 @@ export default function Home() {
             <div className="w-full h-full flex justify-center items-center p-4">
               <div className="w-full h-full sm:h-auto sm:w-96 max-w-md p-8 bg-white shadow-lg rounded-xl flex flex-col border border-gray-100">
                 <h1 className="font-sans text-3xl font-bold text-center mb-2 text-gray-900">
-                  Daily Dutch
+                  Beter Woorden
                 </h1>
                 <p className="text-center text-gray-500 mb-6 text-sm">Sign in to start learning</p>
                 <Auth

@@ -11,7 +11,7 @@ export default function Sidebar({ currentView, onChangeView }: SidebarProps) {
   return (
     <div className="w-64 bg-slate-900 text-slate-300 h-screen flex flex-col p-6 flex-shrink-0 border-r border-slate-800">
       <div className="flex items-center gap-3 mb-10 text-white">
-        <h2 className="text-lg font-bold tracking-tight rounded-xl border p-3">Daily Dutch</h2>
+        <h2 className="text-lg font-bold tracking-tight rounded-xl border p-3">Beter Woorden</h2>
       </div>
       
       <nav className="flex-1 space-y-1">

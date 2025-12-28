@@ -1,6 +1,4 @@
-# Daily Dutch
-
-Disclaiminer: mostly "careful-vibe-coded" project with Gemini.
+# Beter Woorden
 
 Application for Dutch practice by filling in the missing word. Uses Gemini to extract
 practice sentences from NOS articles, chooses a word and makes you guess which word goes
@@ -18,3 +16,5 @@ You must have `uv` installed and you should create `.env` with,
 
 
 2025 Stephen Sinclair <radarsat1@gmail.com>, see LICENSE.
+
+Disclaiminer: a mostly "careful-vibe-coded" project with Gemini.

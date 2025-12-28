@@ -1,7 +1,7 @@
 [project]
-name = "dailywords"
+name = "beter_woorden"
 version = "0.1.0"
-description = "Add your description here"
+description = "Dutch practice"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
