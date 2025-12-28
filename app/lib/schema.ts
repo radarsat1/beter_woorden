@@ -7,113 +7,154 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
+      checkpoint_blobs: {
+        Row: {
+          blob: string | null
+          channel: string
+          checkpoint_ns: string
+          thread_id: string
+          type: string
+          version: string
+        }
+        Insert: {
+          blob?: string | null
+          channel: string
+          checkpoint_ns?: string
+          thread_id: string
+          type: string
+          version: string
+        }
+        Update: {
+          blob?: string | null
+          channel?: string
+          checkpoint_ns?: string
+          thread_id?: string
+          type?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      checkpoint_writes: {
+        Row: {
+          blob: string | null
+          channel: string
+          checkpoint_id: string
+          checkpoint_ns: string
+          idx: number
+          task_id: string
+          thread_id: string
+          type: string | null
+        }
+        Insert: {
+          blob?: string | null
+          channel: string
+          checkpoint_id: string
+          checkpoint_ns?: string
+          idx: number
+          task_id: string
+          thread_id: string
+          type?: string | null
+        }
+        Update: {
+          blob?: string | null
+          channel?: string
+          checkpoint_id?: string
+          checkpoint_ns?: string
+          idx?: number
+          task_id?: string
+          thread_id?: string
+          type?: string | null
+        }
+        Relationships: []
+      }
+      checkpoints: {
+        Row: {
+          checkpoint: Json
+          checkpoint_id: string
+          checkpoint_ns: string
+          metadata: Json
+          parent_checkpoint_id: string | null
+          thread_id: string
+          type: string | null
+        }
+        Insert: {
+          checkpoint: Json
+          checkpoint_id: string
+          checkpoint_ns?: string
+          metadata?: Json
+          parent_checkpoint_id?: string | null
+          thread_id: string
+          type?: string | null
+        }
+        Update: {
+          checkpoint?: Json
+          checkpoint_id?: string
+          checkpoint_ns?: string
+          metadata?: Json
+          parent_checkpoint_id?: string | null
+          thread_id?: string
+          type?: string | null
+        }
+        Relationships: []
+      }
       quiz_attempts: {
         Row: {
-          attempt: string | null
           created_at: string
           id: number
-          is_correct: boolean | null
-          question_id: number
-          session_id: number
+          max_score: number
+          quiz_id: number
+          responses: Json | null
+          score: number
           user_id: string
         }
         Insert: {
-          attempt?: string | null
           created_at?: string
           id?: number
-          is_correct?: boolean | null
-          question_id: number
-          session_id: number
+          max_score?: number
+          quiz_id: number
+          responses?: Json | null
+          score?: number
           user_id: string
         }
         Update: {
-          attempt?: string | null
           created_at?: string
           id?: number
-          is_correct?: boolean | null
-          question_id?: number
-          session_id?: number
+          max_score?: number
+          quiz_id?: number
+          responses?: Json | null
+          score?: number
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "quiz_attempts_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "quiz_questions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quiz_attempts_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "quiz_sessions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      quiz_questions: {
-        Row: {
-          english: string | null
-          id: number
-          question: string
-          question_order: number | null
-          quiz_id: number
-          word: string
-        }
-        Insert: {
-          english?: string | null
-          id?: number
-          question: string
-          question_order?: number | null
-          quiz_id: number
-          word: string
-        }
-        Update: {
-          english?: string | null
-          id?: number
-          question?: string
-          question_order?: number | null
-          quiz_id?: number
-          word?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "quiz_questions_quiz_id_fkey"
-            columns: ["quiz_id"]
-            isOneToOne: false
-            referencedRelation: "quizzes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      quiz_sessions: {
-        Row: {
-          created_at: string
-          id: number
-          quiz_id: number
-          score: number | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          quiz_id: number
-          score?: number | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          quiz_id?: number
-          score?: number | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "quiz_sessions_quiz_id_fkey"
+            foreignKeyName: "quiz_attempts_quiz_id_fkey"
             columns: ["quiz_id"]
             isOneToOne: false
             referencedRelation: "quizzes"
@@ -153,24 +194,24 @@ export type Database = {
       }
       quizzes: {
         Row: {
-          article_title: string | null
-          article_url: string | null
+          content: Json | null
+          context: Json
           created_at: string
           id: number
           status: string | null
           user_id: string
         }
         Insert: {
-          article_title?: string | null
-          article_url?: string | null
+          content?: Json | null
+          context?: Json
           created_at?: string
           id?: number
           status?: string | null
           user_id: string
         }
         Update: {
-          article_title?: string | null
-          article_url?: string | null
+          content?: Json | null
+          context?: Json
           created_at?: string
           id?: number
           status?: string | null
@@ -178,56 +219,27 @@ export type Database = {
         }
         Relationships: []
       }
-      word_list_entries: {
-        Row: {
-          created_at: string
-          id: number
-          user_id: string
-          word: string
-          word_list_id: number
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          user_id: string
-          word: string
-          word_list_id: number
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          user_id?: string
-          word?: string
-          word_list_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "word_list_entries_word_list_id_fkey"
-            columns: ["word_list_id"]
-            isOneToOne: false
-            referencedRelation: "word_lists"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       word_lists: {
         Row: {
           created_at: string
           id: number
           name: string
           user_id: string
+          words: Json
         }
         Insert: {
           created_at?: string
           id?: number
           name: string
           user_id: string
+          words?: Json
         }
         Update: {
           created_at?: string
           id?: number
           name?: string
           user_id?: string
+          words?: Json
         }
         Relationships: []
       }
@@ -365,6 +377,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

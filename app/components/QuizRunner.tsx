@@ -2,17 +2,10 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/utils/supabase'
-import { Database } from '@/lib/schema'
 import { useAuth } from './AuthProvider'
+import { QuestionItem, isQuestionArray } from '@/lib/quiz'
 
-// Define the content shape
-interface QuestionItem {
-  question: string;
-  answer: string;
-  english: string;
-}
-
-interface QuizRunnerProps {
+export interface QuizRunnerProps {
   quizId: number
   onFinish: (attemptId: number) => void
 }
@@ -38,8 +31,8 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
         .eq('id', quizId)
         .single()
 
-      if (data && Array.isArray(data.content)) {
-        setQuestions(data.content as QuestionItem[])
+      if (isQuestionArray(data?.content)) {
+        setQuestions(data.content)
       } else {
         console.error("No content found or invalid format", error)
       }

@@ -2,19 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
-import { Database } from '@/lib/schema'
 import { useQuizJob } from "@/components/QuizJobProvider";
+import { QuizRow, QuizAttempt, QuizWithHistory } from '@/lib/quiz'
 
-// Update Type Definition based on Hybrid Schema
-type QuizRow = Database['public']['Tables']['quizzes']['Row']
-type QuizAttempt = Database['public']['Tables']['quiz_attempts']['Row']
-
-// Composite type for the view
-type QuizWithHistory = QuizRow & {
-  quiz_attempts: Pick<QuizAttempt, 'id' | 'score' | 'created_at'>[]
-}
-
-interface QuizListProps {
+export interface QuizListProps {
   // onSelectQuiz now passes the quizId and optionally an attemptId (if reviewing history)
   onSelectQuiz: (id: number, attemptId?: number) => void
 }
@@ -73,7 +64,7 @@ export default function QuizList({ onSelectQuiz }: QuizListProps) {
       })
 
       if (error) {
-        throw new Error(err.error || 'Failed to generate quiz')
+        throw new Error(error || 'Failed to generate quiz')
       }
 
       // Hand off the thread_id to the global poller
@@ -143,13 +134,13 @@ export default function QuizList({ onSelectQuiz }: QuizListProps) {
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="font-bold text-xl text-gray-900 mb-1">
-                    {quiz?.context?.title ?? 'Untitled Quiz'}
+                    {quiz.context?.title ?? 'Untitled Quiz'}
                   </h3>
 
                   <div className="flex gap-2 text-sm text-gray-500 mb-2">
                     <span>{new Date(quiz.created_at).toLocaleDateString()}</span>
                     <span>•</span>
-                    <span className="capitalize">{quiz.source_type || 'Article'}</span>
+                    <span className="capitalize">{quiz.context?.type || 'Article'}</span>
                   </div>
 
                   {/* Status Indicator (if generating happens async in background) */}

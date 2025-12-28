@@ -2,14 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
-import { Database } from '@/lib/schema'
-
-// Define the shape of the JSON content
-interface QuestionItem {
-  question: string;
-  answer: string; // The correct word
-  english: string;
-}
+import { QuestionItem, isQuestionArray } from '@/lib/quiz'
 
 // Map the user responses (assuming simple key-value: index -> string)
 type UserResponses = Record<string, string>
@@ -46,8 +39,8 @@ export default function QuizReview({ quizId, attemptId, onBack }: { quizId: numb
         // Cast the JSON content to our typed array
         // We handle the case where quiz might be null or content might be empty
         const quizContent = data.quiz?.content
-        if (Array.isArray(quizContent)) {
-          setQuestions(quizContent as QuestionItem[])
+        if (isQuestionArray(quizContent)) {
+          setQuestions(quizContent)
         }
       }
       setLoading(false)
