@@ -6,6 +6,7 @@ import { SupabaseSaver } from "./SupabaseSaver.ts";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import * as cheerio from "cheerio";
 import { z } from "zod";
+import { corsHeaders } from "../_shared/cors.ts"
 
 // --- Config ---
 const NUM_SENTENCES = 10;
@@ -358,7 +359,7 @@ const app = workflow.compile({ checkpointer });
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS")
-    return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*" } });
+    return new Response("ok", { headers: corsHeaders });
 
   try {
     const authHeader = req.headers.get("Authorization");
