@@ -9,7 +9,7 @@ import { z } from "zod";
 
 // --- Config ---
 const NUM_SENTENCES = 10;
-const WORKER_URL = 'http://host.docker.internal:3001/generate_quiz';
+const WORKER_URL = Deno.env.get('GENERATE_QUIZ_WORKER_URL');
 const MAX_WAIT_MINUTES = 5;
 
 // Helper to get an LLM (Used only for formatting prompt now, or can be removed if prompt is purely string based)
