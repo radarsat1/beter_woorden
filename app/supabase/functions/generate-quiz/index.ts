@@ -229,7 +229,7 @@ async function triggerWorkerNode(state: AgentState): Promise<Partial<AgentState>
         prompt: prompt,
         quiz_id: quiz.id,
         user_id: state.user_id,
-        webhook: Deno.env.get('NEXT_PUBLIC_SUPABASE_URL') + '/functions/v1/save-quiz',
+        webhook: supabaseUrl,
         user_token: state.user_token
       })
     });
