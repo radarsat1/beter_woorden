@@ -18,8 +18,8 @@ services:
       - "traefik.http.services.app.loadbalancer.server.port=3001"
       
       # --- Router Logic ---
-      # We define the router rule based on the DOMAIN_NAME in .env
-      - "traefik.http.routers.app.rule=Host(`${DOMAIN_NAME}`)"
+      # We define the router rule based on the DOMAIN_NAME in .env, and we require a custom header to help block bot traffic.
+      - "traefik.http.routers.app.rule=Host(`${DOMAIN_NAME}`) && Header(`X-Custom-Secret`, `${CUSTOM_SECRET}`)"
       # We inject the specific entrypoint (local port 8000 or prod port 443)
       - "traefik.http.routers.app.entrypoints=${TRAEFIK_ENTRYPOINT}"
       # We toggle TLS (HTTPS) on or off

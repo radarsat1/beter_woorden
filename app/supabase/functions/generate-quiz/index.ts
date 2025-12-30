@@ -11,6 +11,7 @@ import { corsHeaders, corsJsonHeaders } from "../_shared/cors.ts"
 // --- Config ---
 const NUM_SENTENCES = 10;
 const WORKER_URL = Deno.env.get('GENERATE_QUIZ_WORKER_URL');
+const CUSTOM_SECRET = Deno.env.get('CUSTOM_SECRET');
 const MAX_WAIT_MINUTES = 5;
 
 // Helper to get an LLM (Used only for formatting prompt now, or can be removed if prompt is purely string based)
@@ -226,7 +227,8 @@ async function triggerWorkerNode(state: AgentState): Promise<Partial<AgentState>
     const workerResp = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json',
-                 'Authorization': 'Bearer ' + state.user_token},
+                 'Authorization': 'Bearer ' + state.user_token,
+                 'X-Custom-Secret': CUSTOM_SECRET },
       body: JSON.stringify({
         prompt: prompt,
         quiz_id: quiz.id,
