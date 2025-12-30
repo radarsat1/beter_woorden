@@ -1,7 +1,7 @@
 "use client";
 
 import { supabase } from '@/utils/supabase'
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 type JobStatus = "processing" | "completed" | "error";
@@ -16,13 +16,16 @@ interface PollResponseItem {
 interface QuizJobContextType {
   activeThreadCount: number;
   trackJob: (threadId: string) => void;
+  refreshTrigger: number;
 }
 
 const QuizJobContext = createContext<QuizJobContextType | undefined>(undefined);
 
 export function QuizJobProvider({ children }: { children: React.ReactNode }) {
   const [threads, setThreads] = useState<string[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   // Ref to track if a poll is currently 'in flight' to prevent overlapping calls
   const isPollingRef = useRef(false);
@@ -76,11 +79,11 @@ export function QuizJobProvider({ children }: { children: React.ReactNode }) {
         if (finishedIds.length > 0) {
           setThreads((prev) => prev.filter((id) => !finishedIds.includes(id)));
 
-          // 5. MAGIC: Refresh Server Components
-          // If we had a success, tell Next.js to re-fetch server data
-          // (i.e. your QuizList component will re-render with the new row from DB)
+          // If we had a success, increment the refresh trigger
           if (hasSuccess) {
-            router.refresh();
+            startTransition(() => {
+              setRefreshTrigger(prev => prev + 1);
+            });
           }
         }
 
@@ -103,7 +106,7 @@ export function QuizJobProvider({ children }: { children: React.ReactNode }) {
   }, [threads, router]);
 
   return (
-    <QuizJobContext.Provider value={{ activeThreadCount: threads.length, trackJob }}>
+    <QuizJobContext.Provider value={{ activeThreadCount: threads.length, trackJob, refreshTrigger }}>
       {children}
     </QuizJobContext.Provider>
   );

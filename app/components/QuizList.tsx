@@ -47,7 +47,7 @@ export default function QuizList({ onSelectQuiz }: QuizListProps) {
 
   useEffect(() => {
     fetchQuizzes()
-  }, [])
+  }, [trackJob])
 
   const handleGenerateQuiz = async () => {
     setGenerating(true)
