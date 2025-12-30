@@ -41,6 +41,13 @@ PUBLIC_IP=$(aws cloudformation describe-stacks \
     --output text \
     --region "$REGION")
 
+echo "#!/bin/sh" >./push.sh
+echo 'cd $(dirname $0)/..' >>./push.sh
+echo "diff ../uv.lock uv.lock >/dev/null 2>&1 || cp ../uv.lock ." >>./push.sh
+echo "rsync -av -e \"ssh -i deploy/$KEY_FILE -o StrictHostKeyChecking=no\" --exclude 'venv' --exclude '.git' ./ ec2-user@$PUBLIC_IP:~/app" >>./push.sh
+echo "ssh -i deploy/$KEY_FILE ec2-user@$PUBLIC_IP 'cd ~/app && scripts/prod.sh'" >>./push.sh
+chmod a+x ./push.sh
+
 echo "=========================================================="
 echo "Deployment Complete!"
 echo "Instance Public IP: $PUBLIC_IP"
@@ -52,3 +59,5 @@ echo ""
 echo "Then connect and run docker:"
 echo "ssh -i deploy/$KEY_FILE ec2-user@$PUBLIC_IP 'cd ~/app && scripts/prod.sh'"
 echo ""
+echo "Or do it all at once:"
+echo "deploy/push.sh"
