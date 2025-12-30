@@ -7,6 +7,7 @@ services:
       - "3001"
     environment:
       - ENVIRONMENT=${DOCKER_ENV}
+      - SUPABASE_PROJECTS=${SUPABASE_PROJECTS}
     labels:
       - "traefik.enable=true"
       # Tell Traefik which port the container listens on internally

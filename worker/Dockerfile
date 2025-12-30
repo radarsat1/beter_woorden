@@ -33,4 +33,4 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 # Run the application (Production settings: no reload, 0.0.0.0)
 # Matches your request for port 3001
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "3001"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "3001", "--log-level", "info"]
