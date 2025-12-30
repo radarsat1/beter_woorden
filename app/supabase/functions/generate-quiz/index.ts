@@ -188,10 +188,10 @@ async function triggerWorkerNode(state: AgentState): Promise<Partial<AgentState>
     4. Respond ONLY with a valid JSON list.
 
     FORMAT EXAMPLE:
-    [
-      {{"sentence": "Het schrijven van een brief is een lastige klus.", "answer": klus", "english": "Writing a letter is a difficult task."}},
+    {{"exercises": [
+      {{"question": "Het schrijven van een brief is een lastige klus.", "answer": klus", "english": "Writing a letter is a difficult task."}},
       ...
-    ]
+    ]}}
   `;
 
   const prompt = await ChatPromptTemplate.fromTemplate(promptText).invoke({
