@@ -181,12 +181,14 @@ export default function QuizList({ onSelectQuiz }: QuizListProps) {
                   )}
                 </div>
 
+              {quiz.status === 'ready' && (
                 <button
                   onClick={() => onSelectQuiz(quiz.id)}
                   className="text-sm border border-gray-300 px-3 py-1 rounded hover:bg-gray-50 text-gray-700 transition-colors"
                 >
                   Start New
                 </button>
+              )}
               </div>
             </div>
           )
