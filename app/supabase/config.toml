@@ -92,3 +92,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/save-quiz/deno.json"
 entrypoint = "./functions/save-quiz/index.ts"
+
+[functions.quiz-worker-health-check]
+enabled = true
+verify_jwt = false
+import_map = "./functions/quiz-worker-health-check/deno.json"
+entrypoint = "./functions/quiz-worker-health-check/index.ts"

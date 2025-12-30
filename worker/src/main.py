@@ -35,6 +35,9 @@ class QuizQuestion(BaseModel):
 class QuizResponse(BaseModel):
     exercises: list[QuizQuestion]
 
+class UserHealthRequest(BaseModel):
+    user_id: str
+
 async def process_quiz_generation(request: QuizRequest):
     """
     Background task that calls the LLM and sends the result via webhook.
@@ -141,6 +144,35 @@ async def generate_quiz(
         "message": "Quiz generation started in background.",
         "quiz_id": request.quiz_id
     }
+
+@app.post('/user_health')
+async def user_health(
+    request: UserHealthRequest,
+    jwt_payload: Annotated[dict, Depends(verify_jwt)]
+):
+    """
+    Returns 200 immediately if user checks out, 403 otherwise; 401 if bad JWT.
+    """
+
+    # SECURITY CROSS-CHECK:
+    # Ensure the user_id in the JSON body is the same as the one in the verified JWT
+    if request.user_id != jwt_payload.get("sub"):
+        logger.warning(f"Security Alert | User {jwt_payload.get('sub')} tried to check health for {request.user_id}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User ID mismatch. You can only check health for yourself."
+        )
+
+    logger.info(f"Health check accepted | user {request.user_id}")
+    return {"status": "healthy"}
+
+@app.get('/health')
+async def health():
+    """
+    Returns 200 immediately.
+    """
+
+    return {"status": "healthy"}
 
 if __name__ == "__main__":
     import uvicorn

@@ -225,7 +225,8 @@ async function triggerWorkerNode(state: AgentState): Promise<Partial<AgentState>
     console.log(`Triggering worker for quiz_id: ${quiz.id}`);
     const workerResp = await fetch(WORKER_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json',
+                 'Authorization': 'Bearer ' + state.user_token},
       body: JSON.stringify({
         prompt: prompt,
         quiz_id: quiz.id,
