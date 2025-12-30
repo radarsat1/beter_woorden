@@ -156,10 +156,9 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
   }
 
   const currentQ = questions[currentIndex]
-  // Handle the text splitting for the blank visualization
-  // Assuming the generator creates "______" or something similar.
-  // We split loosely on 2 or more underscores to catch variants.
-  const questionParts = currentQ.question.split(/_{2,}/)
+  // Split the sentence by the answer word (case-insensitive, whole word boundary)
+  const escapedAnswer = currentQ.answer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const questionParts = currentQ.question.split(new RegExp(`\\b${escapedAnswer}\\b`, 'gi'))
 
   return (
     <div className="flex flex-col h-full max-w-3xl mx-auto p-4">
@@ -201,9 +200,15 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
             >
               <div className="text-gray-600 text-sm">
                 <span className="text-gray-300 font-mono text-xs mr-3 select-none">{idx + 1}.</span>
-                {/* Reconstruct simple preview */}
-                {q.question.replace(/_{2,}/g, '___')}
-                <span className="text-blue-600 font-bold ml-2 border-b border-blue-200">{answer}</span>
+                {/* Split historical question by the answer word to insert response in-place */}
+                {q.question.split(new RegExp(`\\b${q.answer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi')).map((part, i, arr) => (
+                  <span key={i}>
+                    {part}
+                    {i < arr.length - 1 && (
+                      <span className="text-blue-600 font-bold mx-1 border-b border-blue-200">{answer || "___"}</span>
+                    )}
+                  </span>
+                ))}
               </div>
               <div className="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 uppercase tracking-wider font-bold bg-gray-100 px-2 py-1 rounded">
                 Edit

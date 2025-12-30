@@ -82,12 +82,9 @@ export default function QuizReview({ quizId, attemptId, onBack }: { quizId: numb
           // Simple normalization for comparison
           const isCorrect = userAnswer.trim().toLowerCase() === q.answer.trim().toLowerCase()
 
-          // Split the question text to insert the blank visualization
-          // The generator uses "______" (6 underscores) or similar placeholders
-          // We split by regex to be safe
-          const parts = q.question.split(/_{2,}/)
-          const preText = parts[0] || ""
-          const postText = parts[1] || ""
+          // Split the question text by the answer word (case-insensitive, whole word boundary)
+          const escapedAnswer = q.answer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          const parts = q.question.split(new RegExp(`\\b${escapedAnswer}\\b`, 'gi'))
 
           return (
             <div
@@ -99,26 +96,27 @@ export default function QuizReview({ quizId, attemptId, onBack }: { quizId: numb
                 <span className="font-bold text-gray-300 mr-4 select-none">{idx + 1}</span>
 
                 {/* Sentence Construction */}
-                <span>{preText}</span>
-
-                {isCorrect ? (
-                  <span className="inline-block mx-1 font-bold text-green-700 border-b-2 border-green-200 px-1">
-                    {q.answer}
+                {parts.map((part, i) => (
+                  <span key={i}>
+                    {part}
+                    {i < parts.length - 1 && (
+                      isCorrect ? (
+                        <span className="inline-block mx-1 font-bold text-green-700 border-b-2 border-green-200 px-1">
+                          {q.answer}
+                        </span>
+                      ) : (
+                        <span className="inline-block mx-1">
+                          <span className="line-through text-red-400 decoration-2 decoration-red-400 mr-2 opacity-75">
+                            {userAnswer || '(skipped)'}
+                          </span>
+                          <span className="font-bold text-green-700 bg-green-50 px-1.5 py-0.5 rounded border border-green-100">
+                            {q.answer}
+                          </span>
+                        </span>
+                      )
+                    )}
                   </span>
-                ) : (
-                  <span className="inline-block mx-1">
-                    {/* User's Wrong Answer */}
-                    <span className="line-through text-red-400 decoration-2 decoration-red-400 mr-2 opacity-75">
-                      {userAnswer || '(skipped)'}
-                    </span>
-                    {/* Correct Answer */}
-                    <span className="font-bold text-green-700 bg-green-50 px-1.5 py-0.5 rounded border border-green-100">
-                      {q.answer}
-                    </span>
-                  </span>
-                )}
-
-                <span>{postText}</span>
+                ))}
               </div>
 
               {q.english && (
