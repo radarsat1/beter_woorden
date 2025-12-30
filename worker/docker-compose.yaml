@@ -8,6 +8,10 @@ services:
     environment:
       - ENVIRONMENT=${DOCKER_ENV}
       - SUPABASE_PROJECTS=${SUPABASE_PROJECTS}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_BASE_URL=${LLM_BASE_URL}
+      - LLM_MODEL=${LLM_MODEL}
+      - LLM_PROVIDER=${LLM_PROVIDER}
     labels:
       - "traefik.enable=true"
       # Tell Traefik which port the container listens on internally

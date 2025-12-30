@@ -19,6 +19,15 @@ logger = logging.getLogger("uvicorn.error") # Merges with uvicorn logs
 # FastAPI app
 app = FastAPI(title="Quiz Worker")
 
+# Environment
+def get_llm_config():
+    return {
+        'api_key': os.environ.get('LLM_API_KEY', 'lm-studio'),
+        'base_url': os.environ.get('LLM_BASE_URL', 'http://localhost:1234/v1'),
+        'model': os.environ.get('LLM_MODEL', 'local-model'),
+        'model_provider': os.environ.get('LLM_PROVIDER', 'openai') or 'openai',
+    }
+
 # --- Pydantic Models for API ---
 class QuizRequest(BaseModel):
     prompt: dict # ChatPromptValue
@@ -45,13 +54,7 @@ async def process_quiz_generation(request: QuizRequest):
     logger.info(f"Task Started | Quiz ID: {request.quiz_id} | User: {request.user_id}")
 
     # Initialize LLM
-    # Best practice: init inside the task or use a global factory
-    llm = init_chat_model(
-        'local-model',
-        model_provider='openai',
-        base_url="http://localhost:1234/v1",
-        api_key="lm-studio"
-    ).with_structured_output(QuizResponse)
+    llm = init_chat_model(**get_llm_config()).with_structured_output(QuizResponse)
 
     try:
         # Reconstruct messages from the raw prompt dictionary
