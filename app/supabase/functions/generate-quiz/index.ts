@@ -231,7 +231,7 @@ async function triggerWorkerNode(state: AgentState): Promise<Partial<AgentState>
         prompt: prompt,
         quiz_id: quiz.id,
         user_id: state.user_id,
-        webhook: supabaseUrl,
+        webhook: supabaseUrl + '/functions/v1/save-quiz',
         user_token: state.user_token
       })
     });
