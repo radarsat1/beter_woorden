@@ -27,6 +27,7 @@ export type QuizRow = Database['public']['Tables']['quizzes']['Row'] & {
   context: {
     title?: string;
     type?: string;
+    url?: string;
   };
 };
 

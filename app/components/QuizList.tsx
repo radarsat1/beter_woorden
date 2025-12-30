@@ -140,7 +140,13 @@ export default function QuizList({ onSelectQuiz }: QuizListProps) {
                   <div className="flex gap-2 text-sm text-gray-500 mb-2">
                     <span>{new Date(quiz.created_at).toLocaleDateString()}</span>
                     <span>•</span>
-                    <span className="capitalize">{quiz.context?.type || 'Article'}</span>
+                    {quiz.context?.url && (
+                      <a href={quiz.context.url} className="hover:underline" target="_blank">
+                        <span className="capitalize">{quiz.context?.type || 'Article'}</span>
+                      </a>
+                    ) || (
+                        <span className="capitalize">{quiz.context?.type || 'Article'}</span>
+                    )}
                   </div>
 
                   {/* Status Indicator (if generating happens async in background) */}
