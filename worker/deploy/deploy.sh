@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Configuration
-STACK_NAME="beter_woorden-worker-stack"
-KEY_NAME="beter_woorden-worker-key"
+STACK_NAME="beterwoorden-worker-stack"
+KEY_NAME="beterwoorden-worker-key"
 KEY_FILE="${KEY_NAME}.pem"
 REGION="eu-central-1"
 
