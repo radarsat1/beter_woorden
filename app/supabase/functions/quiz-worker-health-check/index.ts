@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { corsHeaders } from "../_shared/cors.ts"
+import { corsHeaders, corsJsonHeaders } from "../_shared/cors.ts"
 
 const WORKER_URL = Deno.env.get('USER_HEALTH_WORKER_URL');
 
@@ -48,10 +48,11 @@ Deno.serve(async (req) => {
     if (!workerResp.ok) throw new Error(`Worker returned ${workerResp.status}`);
 
     return new Response(JSON.stringify({ response: await workerResp.json() }),
-                        { headers: { "Content-Type": "application/json" } });
+                        { headers: corsJsonHeaders });
 
   } catch (err: any) {
     console.error(err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: err.message }),
+                        { status: 500, headers: corsJsonHeaders });
   }
 });

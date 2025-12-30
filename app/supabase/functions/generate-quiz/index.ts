@@ -6,7 +6,7 @@ import { SupabaseSaver } from "./SupabaseSaver.ts";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import * as cheerio from "cheerio";
 import { z } from "zod";
-import { corsHeaders } from "../_shared/cors.ts"
+import { corsHeaders, corsJsonHeaders } from "../_shared/cors.ts"
 
 // --- Config ---
 const NUM_SENTENCES = 10;
@@ -420,7 +420,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      return new Response(JSON.stringify({ data: results }), { headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ data: results }), { headers: corsJsonHeaders });
     }
 
     // --- Mode 2: Start New Graph ---
@@ -443,10 +443,11 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       status: "started",
       thread_id: threadId
-    }), { headers: { "Content-Type": "application/json" } });
+    }), { headers: corsJsonHeaders });
 
   } catch (err: any) {
     console.error(err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: err.message }),
+                        { status: 500, headers: corsJsonHeaders });
   }
 });
