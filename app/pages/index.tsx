@@ -78,7 +78,7 @@ export default function Home() {
               }}
             />
 
-            <main className="flex-1 h-full overflow-hidden bg-gray-50">
+            <main className="flex-1 h-full flex-col overflow-y-auto bg-gray-50">
               {/* VIEW: WORD LISTS */}
               {view === 'wordlists' && <WordListEditor />}
 
