@@ -51,7 +51,7 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
   // Word Bank Logic
   const allWords = questions.map(q => q.answer).sort()
   const usedWords = Object.values(responses).map(val => normalize(val || ''))
-
+  const isReviewing = questions.length > 0 && questions.every((_, i) => !!responses[i])
   // Count frequency for duplicate handling
   const usedCounts: Record<string, number> = {}
   usedWords.forEach(w => usedCounts[w] = (usedCounts[w] || 0) + 1)
@@ -59,13 +59,17 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
   const handleNext = () => {
     // 1. Save locally to state
     const val = input.trim()
-    if (val) {
+    if (val && currentIndex < questions.length) {
       setResponses(prev => ({ ...prev, [currentIndex]: val }))
     }
 
     // 2. Advance
     setInput('')
-    setCurrentIndex(prev => prev + 1)
+    if (isReviewing) {
+      setCurrentIndex(questions.length)
+    } else {
+      setCurrentIndex(prev => prev + 1)
+    }
   }
 
   const handleFinish = async () => {
@@ -111,16 +115,13 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
   }
 
   const jumpTo = (idx: number) => {
-    // Allow reviewing previous questions
-    if (idx < currentIndex) {
-      // Temporarily save current input if active
-      if (input.trim()) {
-        setResponses(prev => ({ ...prev, [currentIndex]: input.trim() }))
-      }
-
-      setCurrentIndex(idx)
-      setInput(responses[idx] || '')
+    // Save current input before jumping
+    if (input.trim() && currentIndex < questions.length) {
+      setResponses(prev => ({ ...prev, [currentIndex]: input.trim() }))
     }
+
+    setCurrentIndex(idx)
+    setInput(responses[idx] || '')
   }
 
   if (loading) return <div className="p-10 text-center text-gray-400">Loading quiz content...</div>
@@ -149,7 +150,7 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
         </div>
 
         <div className="mt-8 text-sm text-gray-400">
-          Answered: {Object.keys(responses).length} / {questions.length}
+          Answered: {questions.filter((_, i) => responses[i]).length} / {questions.length}
         </div>
       </div>
     )
@@ -189,7 +190,11 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
       {/* History / Previous Answers */}
       <div className="flex-1 overflow-y-auto mb-6 space-y-2 pr-2 custom-scrollbar">
         {questions.map((q, idx) => {
-          if (idx >= currentIndex) return null // Only show past questions
+          // Hide if it's the current question
+          if (idx === currentIndex) return null
+          // Hide if it's a future question that hasn't been answered yet
+          if (idx > currentIndex && !responses[idx]) return null
+
           const answer = responses[idx]
 
           return (
@@ -247,10 +252,10 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
           ))}
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); handleNext(); }} className="flex gap-4">
+        <form onSubmit={(e) => { e.preventDefault(); handleNext(); }} className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <input
             ref={inputRef}
-            className="flex-1 px-4 py-4 border border-gray-200 bg-gray-50 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 outline-none text-xl transition-all placeholder-gray-400"
+            className="w-full sm:flex-1 px-4 py-4 border border-gray-200 bg-gray-50 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 outline-none text-xl transition-all placeholder-gray-400"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type the missing word..."
@@ -259,13 +264,31 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
             autoCapitalize="off"
             spellCheck="false"
           />
-          <button
-            type="submit"
-            disabled={!input.trim()}
-            className="bg-blue-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-blue-700 active:transform active:scale-95 transition-all shadow-lg hover:shadow-blue-200 disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed"
-          >
-            Next
-          </button>
+          <div className="flex gap-2 sm:gap-4 w-full sm:w-auto">
+            <button
+              type="submit"
+              disabled={!input.trim()}
+              className="flex-1 sm:px-10 py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 active:transform active:scale-95 transition-all shadow-lg hover:shadow-blue-200 disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed sm:min-w-[140px]"
+            >
+              {isReviewing ? 'Update' : 'Next'}
+            </button>
+
+            {isReviewing && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (input.trim() && currentIndex < questions.length) {
+                    setResponses(prev => ({ ...prev, [currentIndex]: input.trim() }))
+                  }
+                  setCurrentIndex(questions.length)
+                }}
+                className="flex-none px-6 py-4 border border-gray-200 text-gray-500 rounded-xl font-bold hover:bg-gray-50 transition-all flex flex-col items-center justify-center leading-none min-w-[80px]"
+              >
+                <span className="text-xs uppercase tracking-tighter mb-1">Back</span>
+                <span className="text-xl">→</span>
+              </button>
+            )}
+          </div>
         </form>
       </div>
     </div>
