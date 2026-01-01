@@ -193,7 +193,18 @@ async function triggerWorkerNode(state: AgentState): Promise<Partial<AgentState>
       {{"question": "Het schrijven van een brief is een lastige klus.", "answer": klus", "english": "Writing a letter is a difficult task."}},
       ...
     ]}}
-  `;
+
+    GROUND RULES:
+    - Ensure that the contents of the "answer" field appears exactly in the "question"
+      field. You are permitted (though not encouraged) to use a modified form of the target
+      word, but if you do, it must appear in "answer" in exactly the modified form.
+    - For the reason above, for modified forms that split two parts of the word to different
+      parts of the sentence, choose one part. Again, modifying the words is not encouraged,
+      only to be done if it helps formulate a good question.
+    - Ensure that the question is related to the article, do not make a question unrelated to
+      the article just so you can use a target word. Instead, select target words that make
+      sense for questions related to the article.
+    `;
 
   const prompt = await ChatPromptTemplate.fromTemplate(promptText).invoke({
     article_text: state.article_text,
