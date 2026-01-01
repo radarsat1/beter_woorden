@@ -87,7 +87,7 @@ async def process_quiz_generation(request: QuizRequest):
                     'user_id': request.user_id,
                     'quiz_id': request.quiz_id,
                     'questions': exercises_data,
-                    'status': 'completed'
+                    'status': 'ready'
                 },
                 timeout=30.0
             )

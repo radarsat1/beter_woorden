@@ -5,6 +5,7 @@
     "@langchain/google-genai": "npm:@langchain/google-genai@2.1.1",
     "@langchain/openai": "npm:@langchain/openai@1.2.0",
     "@langchain/langgraph": "npm:@langchain/langgraph@1.0.7",
+    "@aws4fetch": "npm:aws4fetch@1.0.20",
     "zod": "https://esm.sh/zod@3.23.8",
     "cheerio": "https://esm.sh/cheerio@1.0.0-rc.12"
   }

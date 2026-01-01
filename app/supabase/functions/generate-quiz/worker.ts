@@ -1,6 +1,29 @@
+import { AwsClient } from "@aws4fetch";
+
 const WORKER_URL = Deno.env.get('GENERATE_QUIZ_WORKER_URL');
 const WORKER_LAMBDA = Deno.env.get('GENERATE_QUIZ_WORKER_LAMBDA');
 const CUSTOM_SECRET = Deno.env.get('CUSTOM_SECRET');
+
+const AWS_REGION = Deno.env.get('AWS_REGION');
+const AWS_ACCESS_KEY_ID = Deno.env.get('AWS_ACCESS_KEY_ID');
+const AWS_SECRET_ACCESS_KEY = Deno.env.get('AWS_SECRET_ACCESS_KEY');
+
+const aws_config = {
+  accessKeyId: AWS_ACCESS_KEY_ID,
+  secretAccessKey: AWS_SECRET_ACCESS_KEY,
+  region: AWS_REGION,
+  service: 'lambda'
+};
+
+const aws = WORKER_LAMBDA && new AwsClient({
+  accessKeyId: AWS_ACCESS_KEY_ID,
+  secretAccessKey: AWS_SECRET_ACCESS_KEY,
+  region: AWS_REGION,
+  service: 'lambda'
+});
+
+const AWS_LAMBDA_ENDPOINT = Deno.env.get('AWS_LAMBDA_ENDPOINT')
+  || `https://lambda.${AWS_REGION}.amazonaws.com`;
 
 async function callWorkerURL(data: QuizWorkerArgs) {
   const workerResp = await fetch(WORKER_URL, {
@@ -13,14 +36,43 @@ async function callWorkerURL(data: QuizWorkerArgs) {
 
   if (!workerResp.ok) throw new Error(`Worker returned ${workerResp.status}`);
 
-  return workerResp;
+  // Result usually empty but log if anything was returned
+  const result = await workerResp.text();
+  if (result)
+    console.log(`Worker returned ${result}`);
+}
+
+async function callWorkerLambda(data: QuizWorkerArgs) {
+  const workerResp = await aws.fetch(
+    `${AWS_LAMBDA_ENDPOINT}/2015-03-31/functions/${WORKER_LAMBDA}/invocations`,
+    {
+      body: JSON.stringify(data),
+      headers: { 'X-Amz-Invocation-Type': 'Event' }
+    }
+  );
+
+  if (workerResp.status != 202 && workerResp.ok) {
+    // We expect Event invocation type to return 202, signifying async execution
+    console.log(`Worker lambda invocation unexpectedly returned status ${workerResp.status}`);
+  }
+
+  if (!workerResp.ok) {
+    const error = await workerResp.text();
+    console.log(error);
+    throw new Error(error);
+  }
+
+  // Result usually empty but log if anything was returned
+  const result = await workerResp.text();
+  if (result)
+    console.log(`Worker returned ${result}`);
 }
 
 export async function callWorker(data: QuizWorkerArgs) {
   if (WORKER_URL)
     return await callWorkerURL(data);
   else if (WORKER_LAMBDA)
-    ;
+    return await callWorkerLambda(data);
 
   throw new Error("No worker defined.");
 }

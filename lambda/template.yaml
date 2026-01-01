@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: LangChain Quiz Worker (ARM64) with IAM Auth
+
+Parameters:
+  LlmBaseUrl:
+    Type: String
+  LlmApiKey:
+    Type: String
+  LlmModel:
+    Type: String
+
+Resources:
+  # 1. The Lambda Function
+  QuizWorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./src
+      Handler: index.handler
+      Runtime: nodejs20.x
+      Architectures:
+        - arm64
+        # - x86_64  # for local testing
+      MemorySize: 128
+      Timeout: 300
+      Environment:
+        Variables:
+          LLM_BASE_URL: !Ref LlmBaseUrl
+          LLM_API_KEY: !Ref LlmApiKey
+          LLM_MODEL: !Ref LlmModel
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        EntryPoints:
+          - index.ts
+
+  # 2. IAM User for the caller
+  QuizInvokerUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: quiz-worker-invoker
+
+  # The Access Key Generation
+  QuizInvokerKeys:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref QuizInvokerUser
+
+  # 3. Policy allowing the User to invoke ONLY our function
+  QuizInvokerPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: InvokeQuizWorkerOnly
+      Users:
+        - !Ref QuizInvokerUser
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource: !GetAtt QuizWorkerFunction.Arn
+
+Outputs:
+  FunctionName:
+    Description: "Name of the Lambda function"
+    Value: !Ref QuizWorkerFunction
+  InvokerUserName:
+    Description: "IAM User created. Go to AWS Console > IAM > Users to generate Access Keys for this user."
+    Value: !Ref QuizInvokerUser
+  InvokerAccessKeyId:
+    Description: "AWS_ACCESS_KEY_ID for the worker"
+    Value: !Ref QuizInvokerKeys
+  InvokerSecretAccessKey:
+    Description: "AWS_SECRET_ACCESS_KEY for the worker"
+    Value: !GetAtt QuizInvokerKeys.SecretAccessKey
