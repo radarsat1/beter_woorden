@@ -230,7 +230,6 @@ async function triggerWorkerNode(state: AgentState): Promise<Partial<AgentState>
     .single();
 
   if (quizError) return { error: quizError.message };
-  console.log('new quiz:', quiz);
 
   // 3. Call External Worker
   try {
@@ -252,6 +251,7 @@ async function triggerWorkerNode(state: AgentState): Promise<Partial<AgentState>
     if (!workerResp.ok) throw new Error(`Worker returned ${workerResp.status}`);
 
   } catch (e: any) {
+    console.log(e);
     return { error: `Failed to call worker: ${e.message}` };
   }
 
@@ -391,13 +391,11 @@ Deno.serve(async (req) => {
       const results = [];
 
       for (const threadId of body.thread_ids) {
-        console.log('here1:', threadId);
         // We only try to resume threads that belong to this user (the threadID convention helps, or Supabase Checkpointer RLS)
         if (!threadId.startsWith(user.id)) {
            results.push({ thread_id: threadId, status: "forbidden" });
            continue;
         }
-        console.log('user checks out');
 
         const config = { configurable: { thread_id: threadId } };
 
@@ -406,7 +404,6 @@ Deno.serve(async (req) => {
 
         // If graph is finished or error
         if (!stateSnapshot.next || stateSnapshot.next.length === 0) {
-          console.log("graph is already finished");
            results.push({
              thread_id: threadId,
              status: "completed",
@@ -437,7 +434,6 @@ Deno.serve(async (req) => {
     }
 
     // --- Mode 2: Start New Graph ---
-    console.log('starting new graph, body:', body);
     const word_list_ids = body.word_list_ids || [];
     const threadId = `${user.id}-${Date.now()}`;
     const config = { configurable: { thread_id: threadId } };
