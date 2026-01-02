@@ -2,19 +2,19 @@ import { createClient } from "@supabase/supabase-js";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatOpenAI } from "@langchain/openai";
 import { StateGraph, Command, interrupt } from "@langchain/langgraph";
-import { SupabaseSaver } from "./SupabaseSaver.ts";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import * as cheerio from "cheerio";
 import { z } from "zod";
 import { corsHeaders, corsJsonHeaders } from "../_shared/cors.ts"
 
+import { SupabaseSaver } from "./SupabaseSaver.ts";
+import { callWorker } from "./worker.ts";
+
 // --- Config ---
 const NUM_SENTENCES = 10;
-const WORKER_URL = Deno.env.get('GENERATE_QUIZ_WORKER_URL');
-const CUSTOM_SECRET = Deno.env.get('CUSTOM_SECRET');
 const MAX_WAIT_MINUTES = 5;
 
-// Helper to get an LLM (Used only for formatting prompt now, or can be removed if prompt is purely string based)
+// Helper to get an LLM
 function getLLM() {
   const provider = (Deno.env.get("LLM_PROVIDER") || "google").toLowerCase();
   const modelName = Deno.env.get("LLM_MODEL") || "gemini-2.5-flash";
@@ -55,6 +55,14 @@ const QuizSchema = z.array(z.object({
   answer: z.string(),
   english: z.string(),
 }));
+
+interface QuizWorkerArgs {
+  prompt: any;
+  quiz_id: number;
+  user_id: string;
+  webhook: string;
+  user_token: string;
+}
 
 interface AgentState {
   // Inputs
@@ -234,24 +242,27 @@ async function triggerWorkerNode(state: AgentState): Promise<Partial<AgentState>
   // 3. Call External Worker
   try {
     console.log(`Triggering worker for quiz_id: ${quiz.id}`);
-    const workerResp = await fetch(WORKER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json',
-                 'Authorization': 'Bearer ' + state.user_token,
-                 'X-Custom-Secret': CUSTOM_SECRET },
-      body: JSON.stringify({
-        prompt: prompt,
-        quiz_id: quiz.id,
-        user_id: state.user_id,
-        webhook: supabaseUrl + '/functions/v1/save-quiz',
-        user_token: state.user_token
-      })
-    });
-
-    if (!workerResp.ok) throw new Error(`Worker returned ${workerResp.status}`);
+    await callWorker({
+      prompt: prompt,
+      quiz_id: quiz.id,
+      user_id: state.user_id,
+      webhook: supabaseUrl + '/functions/v1/save-quiz',
+      user_token: state.user_token
+    } as QuizWorkerArgs)
 
   } catch (e: any) {
     console.log(e);
+
+    const { error: quizError2 } = await supabase
+      .from("quizzes")
+      .update({
+        status: 'error',
+      })
+      .eq('id', quiz.id)
+      .select()
+      .single();
+
+    if (quizError2) return { error: `Failed saving worker error ${e.message}: ${quizError2.message}` };
     return { error: `Failed to call worker: ${e.message}` };
   }
 

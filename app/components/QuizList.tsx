@@ -151,9 +151,15 @@ export default function QuizList({ onSelectQuiz }: QuizListProps) {
 
                   {/* Status Indicator (if generating happens async in background) */}
                   {quiz.status !== 'ready' && (
-                     <span className="inline-block px-2 py-0.5 text-xs rounded bg-yellow-100 text-yellow-800 mb-2">
+                    quiz.status === 'error' && (
+                     <span className="inline-block px-2 py-0.5 text-xs rounded bg-red-100 text-red-800 mb-2">
                        {quiz.status}
                      </span>
+                    ) || (
+                      <span className="inline-block px-2 py-0.5 text-xs rounded bg-yellow-100 text-yellow-800 mb-2">
+                       {quiz.status}
+                     </span>
+                    )
                   )}
 
                   {/* History / Attempts */}
