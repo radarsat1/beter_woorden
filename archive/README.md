@@ -17,4 +17,4 @@ You must have `uv` installed and you should create `.env` with,
 
 2025 Stephen Sinclair <radarsat1@gmail.com>, see LICENSE.
 
-Disclaiminer: a mostly "careful-vibe-coded" project with Gemini.
+Disclaimer: a mostly "careful-vibe-coded" project with Gemini.
