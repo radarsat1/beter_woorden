@@ -46,9 +46,9 @@ Deno.serve(async (req) => {
 
     const payload = (await req.json()).only; // TODO
 
-    // Payload expected: { title: "...", questions: [...], word_list_ids: [] }
-    if (payload.questions && !Array.isArray(payload.questions)) {
-      throw new Error("Invalid payload: 'questions' must be an array.");
+    // Payload expected: { title: "...", exercises: [...], word_list_ids: [] }
+    if (payload.exercises && !Array.isArray(payload.exercises)) {
+      throw new Error("Invalid payload: 'exercises' must be an array.");
     }
 
     if (payload.quiz_id) {
@@ -56,11 +56,11 @@ Deno.serve(async (req) => {
       if (payload.status == 'success')
         payload.status = 'ready';
 
-      // Update Quiz (Questions go into 'content' JSONB column)
+      // Update Quiz (Exercises go into 'content' JSONB column)
       const { data: quiz, error: quizError } = await supabase
         .from("quizzes")
         .update({
-          content: payload.questions,
+          content: payload.exercises,
           status: payload.status
         })
         .eq("id", payload.quiz_id)
@@ -77,13 +77,13 @@ Deno.serve(async (req) => {
       );
     }
     else {
-      // Insert Quiz (Questions go into 'content' JSONB column)
+      // Insert Quiz (Exercises go into 'content' JSONB column)
       const { data: quiz, error: quizError } = await supabase
         .from("quizzes")
         .insert({
           user_id: user.id,
           context: payload.context,
-          content: payload.questions,
+          content: payload.exercises,
           status: "ready"
         })
         .select()
