@@ -454,12 +454,12 @@ Deno.serve(async (req) => {
     };
 
     // Run until the first interrupt (at check_status)
-    await app.invoke(initialState, config);
+    const state = await app.invoke(initialState, config);
 
     // Return the thread_id so the client can poll later
     return new Response(JSON.stringify({
-      status: "started",
-      thread_id: threadId
+      status: state.generated_quiz ? "ready" : "started",
+      thread_id: state.generated_quiz ? null : threadId,
     }), { headers: corsJsonHeaders });
 
   } catch (err: any) {

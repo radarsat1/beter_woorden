@@ -68,7 +68,8 @@ export default function QuizList({ onSelectQuiz }: QuizListProps) {
       }
 
       // Hand off the thread_id to the global poller
-      trackJob(data.thread_id);
+      if (data.thread_id)
+        trackJob(data.thread_id);
 
       // Refresh the list to show the new quiz
       await fetchQuizzes()
