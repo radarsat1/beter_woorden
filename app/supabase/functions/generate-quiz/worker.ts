@@ -21,13 +21,6 @@ const AWS_REGION = Deno.env.get('AWS_REGION');
 const AWS_ACCESS_KEY_ID = Deno.env.get('AWS_ACCESS_KEY_ID');
 const AWS_SECRET_ACCESS_KEY = Deno.env.get('AWS_SECRET_ACCESS_KEY');
 
-const aws_config = {
-  accessKeyId: AWS_ACCESS_KEY_ID,
-  secretAccessKey: AWS_SECRET_ACCESS_KEY,
-  region: AWS_REGION,
-  service: 'lambda'
-};
-
 const aws = WORKER_LAMBDA && new AwsClient({
   accessKeyId: AWS_ACCESS_KEY_ID,
   secretAccessKey: AWS_SECRET_ACCESS_KEY,
@@ -56,7 +49,6 @@ async function callWorkerURL(data: QuizWorkerBatchRequest) {
 }
 
 async function callWorkerLambda(data: QuizWorkerBatchRequest) {
-  console.log(`calling worker lambda with: ${JSON.stringify(data)}`);
   const workerResp = await aws.fetch(
     `${AWS_LAMBDA_ENDPOINT}/2015-03-31/functions/${WORKER_LAMBDA}/invocations`,
     {
@@ -67,11 +59,10 @@ async function callWorkerLambda(data: QuizWorkerBatchRequest) {
 
   if (workerResp.status != 202 && workerResp.ok) {
     // We expect Event invocation type to return 202, signifying async execution
-    console.warn(`Worker lambda invocation unexpectedly returned status ${workerResp.status}`);
+    console.warn(`Worker lambda invocation unexpectedly returned status ${workerResp.status}, expected 202.`);
   }
 
   if (!workerResp.ok) {
-    WAS HERE TRACING MYSTERIOUS ERROR
     const error = await workerResp.text();
     console.log(error);
     throw new Error(error);
@@ -83,11 +74,24 @@ async function callWorkerLambda(data: QuizWorkerBatchRequest) {
     console.log(`Worker returned ${workerResp.status}: ${result}`);
 }
 
-export async function callWorker(data: QuizWorkerBatchRequest) {
+export async function callWorkerAsync(data: QuizWorkerBatchRequest) {
+  let worker = null;
   if (WORKER_URL)
-    return await callWorkerURL(data);
+    worker = callWorkerURL(data);
   else if (WORKER_LAMBDA)
-    return await callWorkerLambda(data);
+    worker = callWorkerLambda(data);
+  else
+    throw new Error("No worker defined.");
 
-  throw new Error("No worker defined.");
+  // Call it with a short initial wait so that we have a chance to catch early errors
+  // (wrong URL, etc)
+  const timeout = new Promise((resolve) => { setTimeout(() => { resolve("TIMEOUT"); }, 300); });
+
+  const winner = await Promise.race([worker, timeout]);
+  if (winner === "TIMEOUT") {
+    console.log("Moving worker to background and returning.");
+    EdgeRuntime.waitUntil(worker.then(
+      () => console.log('Done calling worker.')
+    ));
+  }
 }

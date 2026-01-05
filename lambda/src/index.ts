@@ -126,17 +126,21 @@ export const handler: Handler = async (event: any) => {
   )));
 
   // Send the webhook
-  const webhook_result = await fetch(
-    batch.webhook,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + batch.user_token,
-      },
-      timeout: 30000,
-      body: JSON.stringify(results),
-    }
-  );
-  console.log(`Webhook sent, status ${webhook_result.status}`);
+  try {
+    const webhook_result = await fetch(
+      batch.webhook,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + batch.user_token,
+        },
+        timeout: 30000,
+        body: JSON.stringify(results),
+      }
+    );
+    console.log(`Webhook sent, status ${webhook_result.status}`);
+  } catch (err: any) {
+    console.log(`Could not send webhook: ${err}`);
+  }
 };

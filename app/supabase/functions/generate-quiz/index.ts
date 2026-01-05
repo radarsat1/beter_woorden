@@ -8,7 +8,7 @@ import { z } from "zod";
 import { corsHeaders, corsJsonHeaders } from "../_shared/cors.ts"
 
 import { SupabaseSaver } from "./SupabaseSaver.ts";
-import { callWorker } from "./worker.ts";
+import { callWorkerAsync } from "./worker.ts";
 
 // --- Config ---
 const NUM_SENTENCES = 10;
@@ -234,10 +234,9 @@ async function triggerWorkerNode(state: AgentState): Promise<Partial<AgentState>
   // 3. Call External Worker
   try {
     console.log(`Triggering worker for quiz_id: ${quiz.id}`);
-    await callWorker({
+    await callWorkerAsync({
       user_id: state.user_id,
-      // webhook: supabaseUrl + '/functions/v1/save-quiz',
-      webhook: 'http://192.168.1.210:54321/functions/v1/save-quiz',
+      webhook: supabaseUrl + '/functions/v1/save-quiz',
       user_token: state.user_token,
       requests: {
         "only": {
@@ -245,10 +244,10 @@ async function triggerWorkerNode(state: AgentState): Promise<Partial<AgentState>
           quiz_id: quiz.id,
         }
       }
-    })
+    });
 
   } catch (e: any) {
-    console.log(e);
+    console.log(`Caught error while calling external worker: ${e}`);
 
     const { error: quizError2 } = await supabase
       .from("quizzes")
