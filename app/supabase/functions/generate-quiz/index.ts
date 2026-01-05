@@ -56,14 +56,6 @@ const QuizSchema = z.array(z.object({
   english: z.string(),
 }));
 
-interface QuizWorkerArgs {
-  prompt: any;
-  quiz_id: number;
-  user_id: string;
-  webhook: string;
-  user_token: string;
-}
-
 interface AgentState {
   // Inputs
   user_token: string;
@@ -243,12 +235,17 @@ async function triggerWorkerNode(state: AgentState): Promise<Partial<AgentState>
   try {
     console.log(`Triggering worker for quiz_id: ${quiz.id}`);
     await callWorker({
-      prompt: prompt,
-      quiz_id: quiz.id,
       user_id: state.user_id,
-      webhook: supabaseUrl + '/functions/v1/save-quiz',
-      user_token: state.user_token
-    } as QuizWorkerArgs)
+      // webhook: supabaseUrl + '/functions/v1/save-quiz',
+      webhook: 'http://192.168.1.210:54321/functions/v1/save-quiz',
+      user_token: state.user_token,
+      requests: {
+        "only": {
+          prompt: prompt,
+          quiz_id: quiz.id,
+        }
+      }
+    })
 
   } catch (e: any) {
     console.log(e);

@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const payload = await req.json();
+    const payload = (await req.json()).only; // TODO
 
     // Payload expected: { title: "...", questions: [...], word_list_ids: [] }
     if (payload.questions && !Array.isArray(payload.questions)) {
@@ -52,6 +52,10 @@ Deno.serve(async (req) => {
     }
 
     if (payload.quiz_id) {
+      // Transform status
+      if (payload.status == 'success')
+        payload.status = 'ready';
+
       // Update Quiz (Questions go into 'content' JSONB column)
       const { data: quiz, error: quizError } = await supabase
         .from("quizzes")
