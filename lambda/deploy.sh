@@ -25,6 +25,7 @@ sam deploy \
   --region "$REGION" \
   --resolve-s3 \
   --parameter-overrides \
+  ParameterKey=Env,ParameterValue=prod \
   ParameterKey=LlmBaseUrl,ParameterValue=$LLM_BASE_URL \
   ParameterKey=LlmApiKey,ParameterValue=$LLM_API_KEY \
   ParameterKey=LlmModel,ParameterValue=$LLM_MODEL

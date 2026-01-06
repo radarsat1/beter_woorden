@@ -15,6 +15,7 @@ export interface QuizWorkerBatchRequest {
 
 const WORKER_URL = Deno.env.get('GENERATE_QUIZ_WORKER_URL');
 const WORKER_LAMBDA = Deno.env.get('GENERATE_QUIZ_WORKER_LAMBDA');
+const useEvent = JSON.parse(Deno.env.get('GENERATE_QUIZ_WORKER_EVENT') || "true");
 const CUSTOM_SECRET = Deno.env.get('CUSTOM_SECRET');
 
 const AWS_REGION = Deno.env.get('AWS_REGION');
@@ -53,7 +54,7 @@ async function callWorkerLambda(data: QuizWorkerBatchRequest) {
     `${AWS_LAMBDA_ENDPOINT}/2015-03-31/functions/${WORKER_LAMBDA}/invocations`,
     {
       body: JSON.stringify(data),
-      headers: { 'X-Amz-Invocation-Type': 'Event' }
+      headers: useEvent ? { 'X-Amz-Invocation-Type': 'Event' } : {},
     }
   );
 

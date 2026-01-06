@@ -90,6 +90,10 @@ function supabaseClient(user_token: string) {
   });
 }
 
+// --- Webhook support ---
+
+const webhookBase = (Deno.env.get('WEBHOOK_BASE') || supabaseUrl);
+
 // --- Node Functions ---
 
 async function fetchWordsNode(state: AgentState): Promise<Partial<AgentState>> {
@@ -292,7 +296,7 @@ async function triggerWorkerNode(state: AgentState): Promise<Partial<AgentState>
     console.log(`Triggering worker for quiz_id: ${quiz.id}`);
     await callWorkerAsync({
       user_id: state.user_id,
-      webhook: supabaseUrl + '/functions/v1/generate-quiz',
+      webhook: webhookBase + '/functions/v1/generate-quiz',
       user_token: state.user_token,
       requests: {
         [state.thread_id]: {

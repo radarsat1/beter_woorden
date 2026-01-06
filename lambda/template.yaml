@@ -9,6 +9,13 @@ Parameters:
     Type: String
   LlmModel:
     Type: String
+  Env:
+    Type: String
+    Default: local
+    AllowedValues: [prod, local]
+
+Conditions:
+  IsLocal: !Equals [!Ref Env, local]
 
 Resources:
   # 1. The Lambda Function
@@ -19,8 +26,7 @@ Resources:
       Handler: index.handler
       Runtime: nodejs20.x
       Architectures:
-        - arm64
-        # - x86_64  # for local testing
+        - !If [IsLocal, x86_64, arm64]
       MemorySize: 128
       Timeout: 300
       Environment:
