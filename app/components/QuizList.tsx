@@ -10,6 +10,12 @@ export interface QuizListProps {
   onSelectQuiz: (id: number, attemptId?: number) => void
 }
 
+interface GenerateResponseItem {
+  status: string;
+}
+
+interface GenerateResponse extends Record<string, GenerateResponseItem> {};
+
 export default function QuizList({ onSelectQuiz }: QuizListProps) {
   const [quizzes, setQuizzes] = useState<QuizWithHistory[]>([])
   const [wordLists, setWordLists] = useState<{id: number, name: string}[]>([])
@@ -58,18 +64,20 @@ export default function QuizList({ onSelectQuiz }: QuizListProps) {
       if (!session) return
 
       // Call the Edge Function
-      // The function now handles fetching words, scraping, and DB insertion internally
+      // The function handles fetching words, scraping, and DB insertion
       const { data, error } = await supabase.functions.invoke('generate-quiz', {
-        body: { word_list_ids: selectedLists }
-      })
+        body: { new_quiz: { word_list_ids: selectedLists } }
+      }) as { data?: GenerateResponse; error?: string | null };
 
-      if (error) {
+      if (error || !data) {
         throw new Error(error || 'Failed to generate quiz')
       }
 
       // Hand off the thread_id to the global poller
-      if (data.thread_id)
-        trackJob(data.thread_id);
+      for (const [thread_id, thread] of Object.entries(data)) {
+        if (thread.status !== 'completed' && thread_id)
+          trackJob(thread_id);
+      }
 
       // Refresh the list to show the new quiz
       await fetchQuizzes()

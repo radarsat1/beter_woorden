@@ -61,6 +61,7 @@ interface AgentState {
   user_token: string;
   user_id: string;
   word_list_ids: number[];
+  thread_id: string;
 
   // Pipeline Data
   target_words: string[];
@@ -75,6 +76,12 @@ interface AgentState {
   generated_quiz?: QuizQuestion[];
   error?: string;
 }
+
+interface GenerateResponseItem {
+  status: string;
+}
+
+interface GenerateResponse extends Record<string, GenerateResponseItem> {};
 
 // --- Supabase Helpers ---
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -236,10 +243,10 @@ async function triggerWorkerNode(state: AgentState): Promise<Partial<AgentState>
     console.log(`Triggering worker for quiz_id: ${quiz.id}`);
     await callWorkerAsync({
       user_id: state.user_id,
-      webhook: supabaseUrl + '/functions/v1/save-quiz',
+      webhook: supabaseUrl + '/functions/v1/generate-quiz',
       user_token: state.user_token,
       requests: {
-        "only": {
+        [state.thread_id]: {
           prompt: prompt,
           quiz_id: quiz.id,
         }
@@ -276,7 +283,7 @@ async function checkStatusNode(state: AgentState): Promise<Partial<AgentState>> 
     .select("content, status, created_at")
     .eq("id", state.quiz_id)
     .single();
-  console.log(`quiz ${state.quiz_id} has status ${data.status}`);
+  console.log(`Quiz ${state.quiz_id} has status ${data.status}`);
 
   if (error) return { error: error.message };
 
@@ -295,10 +302,18 @@ async function checkStatusNode(state: AgentState): Promise<Partial<AgentState>> 
 // handles the pause so that if we resume here we don't have to re-execute the query, we
 // rely on the graph to cycle back to check_status for that.
 function waitNode(state: AgentState) {
-    console.log("--- Pause: Waiting for Client/Worker ---");
-    // This value is returned when the client calls resume
-    interrupt("Waiting for external worker...");
+  console.log("--- Pause: Waiting for Client/Worker ---");
+  // This value is returned when the client calls resume
+  const result = interrupt("Waiting for external worker...");
+
+  if (result === 'poll')
     return {};
+
+  if (result.quiz_id !== state.quiz_id || result.user_id !== state.user_id) {
+    throw new Error("Unexpected content from worker.");
+  }
+
+  return { generated_quiz: result.exercises };
 }
 
 async function finalizeQuizNode(state: AgentState): Promise<Partial<AgentState>> {
@@ -307,10 +322,10 @@ async function finalizeQuizNode(state: AgentState): Promise<Partial<AgentState>>
 
   const supabase = supabaseClient(state.user_token);
 
-  // Update Status
+  // Update content and status
   await supabase
     .from("quizzes")
-    .update({ status: "ready" })
+    .update({ status: "ready", content: state.generated_quiz })
     .eq("id", state.quiz_id);
 
   // Link Word Lists
@@ -331,6 +346,7 @@ const workflow = new StateGraph<AgentState>({
   channels: {
     user_token: null,
     user_id: null,
+    thread_id: null,
     word_list_ids: null,
     target_words: null,
     article_url: null,
@@ -392,78 +408,86 @@ Deno.serve(async (req) => {
     if (!user) throw new Error("Unauthorized: " + authError);
 
     const body = await req.json();
+    const threadPromises: Record<string, Promise> = {};
+    let response: GenerateResponse = {}
 
-    // --- Mode 1: Poll Existing Threads ---
-    if (body.thread_ids && Array.isArray(body.thread_ids)) {
-      const results = [];
+    // --- Check each requested thread ---
+    for (const threadId of Object.keys(body)) {
+      if (threadId === 'new_quiz') {
+        // --- Start New Graph ---
+        const word_list_ids = body.new_quiz.word_list_ids || [];
+        const newThreadId = `${user.id}-${Date.now()}`;
 
-      for (const threadId of body.thread_ids) {
-        // We only try to resume threads that belong to this user (the threadID convention helps, or Supabase Checkpointer RLS)
+        const initialState: AgentState = {
+          user_token: token,
+          user_id: user.id,
+          thread_id: newThreadId,
+          word_list_ids,
+          target_words: [],
+        };
+
+        // Run until the first interrupt (at check_status)
+        const config = { configurable: { thread_id: newThreadId } };
+        threadPromises[newThreadId] = app.invoke(initialState, config);
+      }
+      else {
+        // --- Poll Existing Thread ---
+        // We only try to resume threads that belong to this user (the threadID convention
+        // helps, or Supabase Checkpointer RLS)
         if (!threadId.startsWith(user.id)) {
-           results.push({ thread_id: threadId, status: "forbidden" });
-           continue;
+          response[threadId] = { status: "forbidden" };
+          continue;
         }
 
-        const config = { configurable: { thread_id: threadId } };
-
         // Check current state
+        const config = { configurable: { thread_id: threadId } };
         const stateSnapshot = await app.getState(config);
 
         // If graph is finished or error
         if (!stateSnapshot.next || stateSnapshot.next.length === 0) {
-           results.push({
-             thread_id: threadId,
+           response[threadId] = {
              status: "completed",
-             result: stateSnapshot.values
-           });
-           continue;
+           };
         }
 
         // If graph is interrupted (tasks exist), we resume it to Poll the DB again
-        if (stateSnapshot.tasks && stateSnapshot.tasks.length > 0) {
+        else if (stateSnapshot.tasks && stateSnapshot.tasks.length > 0) {
           console.log(`Resuming thread ${threadId} to check status...`);
+          console.log(`body: ${JSON.stringify(body[threadId])}`);
+          threadPromises[threadId] = await app.invoke(
+            new Command({ resume: body[threadId] }),
+            config
+          );
+        }
 
-          const result = await app.invoke(new Command({ resume: "poll" }), config);
-
-          // Determine status based on result (is it done now?)
-          const finalState = await app.getState(config);
-          const isDone = !finalState.next || finalState.next.length === 0;
-
-          results.push({
-            thread_id: threadId,
-            status: isDone ? "completed" : "processing",
-            result: isDone ? finalState.values : null
-          });
+        else {
+           response[threadId] = {
+             status: "unknown",
+           };
         }
       }
-
-      return new Response(JSON.stringify({ data: results }), { headers: corsJsonHeaders });
     }
 
-    // --- Mode 2: Start New Graph ---
-    const word_list_ids = body.word_list_ids || [];
-    const threadId = `${user.id}-${Date.now()}`;
-    const config = { configurable: { thread_id: threadId } };
+    // Await all graphs concurrently
+    await Promise.all(Object.values(threadPromises));
 
-    const initialState: AgentState = {
-      user_token: token,
-      user_id: user.id,
-      word_list_ids,
-      target_words: [],
-    };
+    // Determine status based on state (is it done now?)
+    for (const threadId of Object.keys(threadPromises)) {
+      const config = { configurable: { thread_id: threadId } };
+      const finalState = await app.getState(config);
+      const isDone = !finalState.next || finalState.next.length === 0;
+      response[threadId] = {
+        status: isDone ? "completed" : "processing",
+      };
+    }
 
-    // Run until the first interrupt (at check_status)
-    const state = await app.invoke(initialState, config);
-
-    // Return the thread_id so the client can poll later
-    return new Response(JSON.stringify({
-      status: state.generated_quiz ? "ready" : "started",
-      thread_id: state.generated_quiz ? null : threadId,
-    }), { headers: corsJsonHeaders });
+    console.log(`Returning ${JSON.stringify(response)}`);
+    return new Response(JSON.stringify(response),
+                        { status: 200, headers: corsJsonHeaders });
 
   } catch (err: any) {
     console.error(err);
-    return new Response(JSON.stringify({ error: err.message }),
+    return new Response(JSON.stringify({ error: err.message } as GenerateResponse),
                         { status: 500, headers: corsJsonHeaders });
   }
 });

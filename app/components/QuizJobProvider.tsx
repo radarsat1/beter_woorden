@@ -19,6 +19,12 @@ interface QuizJobContextType {
   refreshTrigger: number;
 }
 
+interface GenerateResponseItem {
+  status: string;
+}
+
+interface GenerateResponse extends Record<string, GenerateResponseItem> {};
+
 const QuizJobContext = createContext<QuizJobContextType | undefined>(undefined);
 
 export function QuizJobProvider({ children }: { children: React.ReactNode }) {
@@ -48,28 +54,23 @@ export function QuizJobProvider({ children }: { children: React.ReactNode }) {
       isPollingRef.current = true;
 
       try {
-        console.log("Polling threads:", threads);
-
         // Ccontinue the graph for all threads.
         const { data, error } = await supabase.functions.invoke('generate-quiz', {
-          body: { thread_ids: threads }
-        })
+          body: Object.fromEntries(threads.map((thread_id) => [thread_id, "poll"]))
+        }) as { data?: GenerateResponse; error?: string | null };
 
-        if (error) throw new Error("Poll failed");
-
-        const results: PollResponseItem[] = data.data;
+        if (error || !data) throw new Error("Poll failed");
 
         // 3. Determine which threads are finished
         const finishedIds: string[] = [];
         let hasSuccess = false;
 
-        for (const job of results) {
+        for (const [thread_id, job] of Object.entries(data)) {
           if (job.status === "completed" || job.status === "error") {
-            finishedIds.push(job.thread_id);
+            finishedIds.push(thread_id);
 
             if (job.status === "completed") {
                 hasSuccess = true;
-                console.log("Quiz Ready:", job.result);
                 // Optional: Trigger a Toast notification here
             }
           }
