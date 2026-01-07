@@ -114,7 +114,7 @@ export class SupabaseSaver extends BaseCheckpointSaver {
   }
 
   async put(
-    config: { configurable: { thread_id: string; checkpoint_ns?: string } },
+    config: { configurable: { thread_id: string; checkpoint_ns?: string; checkpoint_id: string } },
     checkpoint: Checkpoint,
     metadata: CheckpointMetadata,
     newVersions: any

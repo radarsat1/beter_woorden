@@ -10,7 +10,7 @@ export interface QuizWorkerBatchRequest {
   user_id: string;
   user_token: string;
   webhook: string;
-  requests: Record<string, QuizRequest>;
+  requests: Record<string, QuizWorkerRequest>;
 }
 
 const WORKER_URL = Deno.env.get('GENERATE_QUIZ_WORKER_URL');
