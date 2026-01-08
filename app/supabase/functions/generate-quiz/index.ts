@@ -14,11 +14,13 @@ import { callWorkerAsync } from "./worker.ts";
 const NUM_SENTENCES = 10;
 
 // --- Interfaces ---
-interface QuizQuestion {
-  question: string;
-  answer: string;
-  english: string;
-}
+const QuizQuestionSchema = z.object({
+  question: z.string(),
+  answer: z.string(),
+  english: z.string(),
+});
+
+type QuizQuestion = z.infer<typeof QuizQuestionSchema>;
 
 // Validation for new quiz request
 const NewQuizSchema = z.object({
@@ -52,20 +54,22 @@ const NewQuizSchema = z.object({
   });
 type NewQuizRequest = z.infer<typeof NewQuizSchema>;
 
-interface AgentState extends NewQuizRequest {
+// AgentState schema that extends NewQuizSchema
+const AgentStateSchema = NewQuizSchema.sourceType().extend({
   // Inputs
-  user_token: string;
-  user_id: string;
-  thread_id: string;
+  user_token: z.string(),
+  user_id: z.string(),
+  thread_id: z.string(),
 
   // Job Data
-  quiz_id?: number;
-  target_words: string[];
+  quiz_id: z.number().optional(),
+  target_words: z.array(z.string()),
 
   // Output
-  generated_quiz?: QuizQuestion[];
-  error?: string;
-}
+  generated_quiz: z.array(QuizQuestionSchema).optional(),
+  error: z.string().optional(),
+});
+type AgentState = z.infer<typeof AgentStateSchema>;
 
 interface GenerateResponseItem {
   status: string;
@@ -404,23 +408,9 @@ function routeSourceSelection(state: AgentState) {
 }
 
 const workflow = new StateGraph<AgentState>({
-  channels: {
-    user_token: null,
-    user_id: null,
-    thread_id: null,
-    word_list_ids: null,
-    language: null,
-    quiz_type: null,
-    target_words: null,
-    article_source: null,
-    article_type: null,
-    article_url: null,
-    article_title: null,
-    article_text: null,
-    generated_quiz: null,
-    quiz_id: null,
-    error: null
-  }
+  channels: Object.fromEntries(
+    Object.entries(AgentStateSchema.shape).map(([key]) => [key, null])
+  ),
 });
 
 workflow.addNode("fetch_words", fetchWordsNode);
