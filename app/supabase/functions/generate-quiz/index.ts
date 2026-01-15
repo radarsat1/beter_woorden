@@ -482,7 +482,8 @@ Deno.serve(async (req) => {
     for (const threadId of Object.keys(body)) {
       if (threadId === 'new_quiz') {
         const reqData = NewQuizSchema.parse(body.new_quiz);
-        const newThreadId = `${user.id}-${Date.now()}`;
+        const randomSuffix = Math.floor(Math.random() * 1000000);
+        const newThreadId = `${user.id}-${Date.now()}-${randomSuffix}`;
 
         // Map inputs directly to AgentState fields
         const initialState: AgentState = {
