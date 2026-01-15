@@ -12,6 +12,7 @@ import { callWorkerAsync } from "./worker.ts";
 
 // --- Config ---
 const NUM_SENTENCES = 10;
+const MAX_ATTEMPTS = 5;
 
 // --- Interfaces ---
 const QuizQuestionSchema = z.object({
@@ -64,6 +65,7 @@ const AgentStateSchema = NewQuizSchema.sourceType().extend({
   // Job Data
   quiz_id: z.number().optional(),
   target_words: z.array(z.string()),
+  attempts: z.number().default(0),
 
   // Output
   generated_quiz: z.array(QuizQuestionSchema).optional(),
@@ -264,30 +266,42 @@ async function triggerWorkerNode(state: AgentState): Promise<Partial<AgentState>
     quiz_type: state.quiz_type,
     article_text: state.article_text,
     target_words: state.target_words.join(", "),
-    num_sentences: NUM_SENTENCES,
-    subset_sentences: Math.floor(NUM_SENTENCES * 0.75),
+
+    // Generate more than we need in case of poor quality questions
+    num_sentences: Math.floor(NUM_SENTENCES * 1.5),
+    subset_sentences: NUM_SENTENCES,
   });
 
-  // 2. Insert Placeholder Quiz in DB
-  const context = {
-    title: state.article_title,
-    url: state.article_url,
-    type: state.article_type,
-  };
-  if (state.meta)
-    context.meta = state.meta;
-  const { data: quiz, error: quizError } = await supabase
-    .from("quizzes")
-    .insert({
-      user_id: state.user_id,
-      context: context,
-      content: null,
-      type: state.quiz_type.toLowerCase(),
-      language: state.language.toLowerCase(),
-      status: "generating"
-    })
-    .select("id")
-    .single();
+  // 2. Insert Placeholder Quiz in DB, if not already done
+  const { data: quiz, error: quizError } = await (async () => {
+    if (state.quiz_id) {
+      return supabase
+        .from("quizzes")
+        .select("id")
+        .eq("id", state.quiz_id)
+        .single();
+    } else {
+      const context = {
+        title: state.article_title,
+        url: state.article_url,
+        type: state.article_type,
+      };
+      if (state.meta)
+        context.meta = state.meta;
+      return supabase
+        .from("quizzes")
+        .insert({
+          user_id: state.user_id,
+          context: context,
+          content: null,
+          type: state.quiz_type.toLowerCase(),
+          language: state.language.toLowerCase(),
+          status: "generating"
+        })
+        .select("id")
+        .single();
+    }
+  })();
 
   if (quizError) return { error: quizError.message };
 
@@ -308,15 +322,6 @@ async function triggerWorkerNode(state: AgentState): Promise<Partial<AgentState>
 
   } catch (e: any) {
     console.log(`Caught error while calling external worker: ${e}`);
-
-    const { error: quizError2 } = await supabase
-      .from("quizzes")
-      .update({
-        status: 'error',
-      })
-      .eq('id', quiz.id)
-      .select()
-      .single();
 
     if (quizError2) return { error: `Failed saving worker error ${e.message}: ${quizError2.message}` };
     return { error: `Failed to call worker: ${e.message}` };
@@ -362,20 +367,64 @@ function waitNode(state: AgentState) {
   const result = interrupt("Waiting for external worker...");
 
   if (result === 'poll')
-    return {};
+    // We make sure "poll" doesn't make it here, should have been short-circuited before
+    // the graph is invoked; because since we are now evaluating and looping back, it
+    // results in an eval instead of a new wait, which then can trigger a new worker
+    // request even if we are still waiting on the previous one.
+    // TODO: just remove this, left here for robustness for now.
+    throw new Error("poll unexpected.");
 
   if (result.quiz_id !== state.quiz_id || result.user_id !== state.user_id) {
     throw new Error("Unexpected content from worker.");
   }
 
-  return { generated_quiz: result.exercises };
+  return {
+    generated_quiz: [...state.generated_quiz || [], ...result.exercises || []],
+    attempts: state.attempts + 1,
+  };
+}
+
+// evaluates whether the quiz questions are good and chooses the best ones according to
+// criteria, cycles back to generation if there are not enough good ones.
+function evaluateNode(state: AgentState) {
+  if (state.error) return {};
+  console.log("--- Step 6: Evaluate ---");
+
+  // Check if answer appears in the question
+  const evaluation = state.generated_quiz.map((quiz) => 
+    quiz.question.split(" ").includes(quiz.answer)
+  );
+
+  // Filter questions
+  const trueEvaluations = state.generated_quiz.filter((quiz, index) => 
+    evaluation[index] === true
+  );
+
+  // Return the top NUM_SENTENCES that have true evaluations
+  return { generated_quiz: trueEvaluations.slice(0, NUM_SENTENCES) }
 }
 
 async function finalizeQuizNode(state: AgentState): Promise<Partial<AgentState>> {
-  if (state.error) return {};
-  console.log("--- Step 6: Finalizing Quiz ---");
+  console.log("--- Step 7: Finalizing Quiz ---");
 
   const supabase = supabaseClient(state.user_token);
+
+  try {
+    if (state.error) throw new Error(state.error);
+    if (state.generated_quiz?.length < NUM_SENTENCES && state.attempts > MAX_ATTEMPTS)
+      throw new Error("Too many attempts.");
+  } catch (err: any) {
+    console.error(err.message);
+    await supabase
+      .from("quizzes")
+      .update({
+        status: 'error',
+      })
+      .eq('id', state.quiz_id)
+      .select()
+      .single();
+    return { error: err.message };
+  }
 
   // Update content and status
   await supabase
@@ -423,6 +472,7 @@ workflow.addNode("scrape_content", scrapeContentNode);
 workflow.addNode("trigger_worker", triggerWorkerNode);
 workflow.addNode("check_status", checkStatusNode);
 workflow.addNode("wait_node", waitNode);
+workflow.addNode("eval_node", evaluateNode);
 workflow.addNode("finalize_quiz", finalizeQuizNode);
 
 // Start
@@ -452,14 +502,32 @@ workflow.addConditionalEdges(
   "wait_node",
   (state) => {
     if (state.error) return "finalize_quiz"; // Proceed to end (or error handler)
-    if (state.generated_quiz) return "finalize_quiz"; // Done
+    if (state.generated_quiz) return "eval_quiz"; // Done
     return "check_status"; // Interrupt and cycle back
   },
   {
     finalize_quiz: "finalize_quiz",
-    check_status: "check_status"
+    eval_quiz: "eval_node",
+    check_status: "check_status",
   }
 );
+
+// Conditional Edge: Eval loop
+workflow.addConditionalEdges(
+  "eval_node",
+  (state) => {
+    if (state.error) return "finalize_quiz"; // Proceed to end (or error handler)
+    if (state.generated_quiz.length == NUM_SENTENCES) return "finalize_quiz"; // Done
+    if (state.attempts > MAX_ATTEMPTS) return "finalize_quiz";
+    console.log(`Only ${state.generated_quiz.length} questions found, cycling back (attempt ${state.attempts}).`);
+    return "trigger_worker"; // Cycle back to add more questions
+  },
+  {
+    finalize_quiz: "finalize_quiz",
+    trigger_worker: "trigger_worker",
+  }
+);
+
 
 const app = workflow.compile({ checkpointer });
 
@@ -490,13 +558,13 @@ Deno.serve(async (req) => {
         const newThreadId = `${user.id}-${Date.now()}-${randomSuffix}`;
 
         // Map inputs directly to AgentState fields
-        const initialState: AgentState = {
+        const initialState: AgentState = AgentStateSchema.parse({
           ...reqData,
           user_token: token,
           user_id: user.id,
           thread_id: newThreadId,
           target_words: [],
-        };
+        });
 
         // Run until the first interrupt (at check_status)
         const config = { configurable: { thread_id: newThreadId } };
@@ -522,13 +590,39 @@ Deno.serve(async (req) => {
            };
         }
 
+        // If request is just polling
+        else if (body[threadId] == 'poll') {
+          response[threadId] = {
+            status: stateSnapshot.values.status,
+          };
+        }
+
         // If graph is interrupted (tasks exist), we resume it to Poll the DB again
         else if (stateSnapshot.tasks && stateSnapshot.tasks.length > 0) {
           console.log(`Resuming thread ${threadId} to check status...`);
-          threadPromises[threadId] = await app.invoke(
-            new Command({ resume: body[threadId] }),
-            config
-          );
+          threadPromises[threadId] = await (async () => {
+            try {
+              await app.invoke(
+                new Command({ resume: body[threadId] }),
+                config
+              );
+            } catch (err: any) {
+              // If anything goes wrong, set the quiz status to error
+              const { values: state } = await app.getState(config);
+              if (state.quiz_id) {
+                const supabase = supabaseClient(state.user_token);
+                const { error: quizError } = await supabase
+                  .from("quizzes")
+                  .update({
+                    status: 'error',
+                  })
+                  .eq('id', state.quiz_id)
+                  .select()
+                  .single();
+              }
+              throw err;
+            }
+          })();
         }
 
         else {
