@@ -1,0 +1,13 @@
+[project]
+name = "beter-woorden-evals"
+version = "0.1.0"
+description = "Evals for Beter Woodern"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "deepeval>=3.7.9",
+    "pandas>=2.3.3",
+    "python-dotenv>=1.2.1",
+    "requests>=2.32.5",
+    "supabase>=2.27.1",
+]
