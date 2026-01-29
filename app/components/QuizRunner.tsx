@@ -23,8 +23,29 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
 
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const CONTENT_KEY = `quiz_content_${quizId}`
+  const PROGRESS_KEY = `quiz_progress_${quizId}`
+
   useEffect(() => {
     const loadQuiz = async () => {
+      // Try to load from cache
+      const cachedContent = localStorage.getItem(CONTENT_KEY)
+      const cachedProgress = localStorage.getItem(PROGRESS_KEY)
+
+      if (cachedContent) {
+        const questions = JSON.parse(cachedContent)
+        setQuestions(questions)
+
+        if (cachedProgress) {
+          const progress = JSON.parse(cachedProgress)
+          setResponses(progress.responses || {})
+          setCurrentIndex(progress.currentIndex || 0)
+        }
+        setLoading(false)
+        return
+      }
+
+      // Otherwise fetch from DB
       const { data, error } = await supabase
         .from('quizzes')
         .select('content')
@@ -33,6 +54,7 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
 
       if (isQuestionArray(data?.content)) {
         setQuestions(data.content)
+        localStorage.setItem(CONTENT_KEY, JSON.stringify(data.content))
       } else {
         console.error("No content found or invalid format", error)
       }
@@ -40,7 +62,17 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
     }
 
     if (user) loadQuiz()
-  }, [quizId, user])
+  }, [quizId, user]) // Keep quizId here so it re-runs if the URL changes
+
+  // Persist progress whenever responses or currentIndex change
+  useEffect(() => {
+    if (!loading && questions.length > 0) {
+      localStorage.setItem(PROGRESS_KEY, JSON.stringify({
+        responses,
+        currentIndex
+      }))
+    }
+  }, [responses, currentIndex, loading, PROGRESS_KEY])
 
   useEffect(() => {
     if (!loading && inputRef.current) {
@@ -57,7 +89,7 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
   usedWords.forEach(w => usedCounts[w] = (usedCounts[w] || 0) + 1)
 
   const handleNext = () => {
-    // 1. Save locally to state
+    // Save locally to state
     const val = input.trim()
     if (val && currentIndex < questions.length) {
       setResponses(prev => ({ ...prev, [currentIndex]: val }))
@@ -76,7 +108,7 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
     if (!user) return
     setSaving(true)
 
-    // 1. Calculate Score
+    // Calculate Score
     let correctCount = 0
     questions.forEach((q, idx) => {
       const userAns = responses[idx] || ""
@@ -90,7 +122,7 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
       ? Math.round((correctCount / questions.length) * 100)
       : 0
 
-    // 2. Save Attempt to DB
+    // Save Attempt to DB
     const { data, error } = await supabase
       .from('quiz_attempts')
       .insert({
@@ -110,7 +142,11 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
       return
     }
 
-    // 3. Notify Parent
+    // Clear cache on successful completion
+    localStorage.removeItem(CONTENT_KEY)
+    localStorage.removeItem(PROGRESS_KEY)
+
+    // Notify Parent
     if (data) onFinish(data.id)
   }
 
