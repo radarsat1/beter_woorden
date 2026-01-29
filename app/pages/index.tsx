@@ -1,5 +1,6 @@
 import Head from 'next/head'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
 import { supabase } from '@/utils/supabase'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
@@ -18,11 +19,10 @@ const Auth = dynamic(
 
 export default function Home() {
   const { user, loading } = useAuth()
+  const router = useRouter()
 
-  // Navigation State
-  const [view, setView] = useState('quizzes') // 'wordlists' | 'quizzes'
-
-  // Quiz Flow State
+  // 1. Keep local state as the primary driver (matches server defaults)
+  const [view, setView] = useState('quizzes')
   const [activeQuizId, setActiveQuizId] = useState<number | null>(null)
   const [activeAttemptId, setActiveAttemptId] = useState<number | null>(null)
   const [isReviewing, setIsReviewing] = useState(false)
@@ -30,10 +30,42 @@ export default function Home() {
   // Mobile Sidebar State
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
+  // 2. Continuous Sync: URL -> State
+  // This handles the Back button. When the URL changes, state updates automatically.
+  useEffect(() => {
+    if (router.isReady) {
+      const qView = (router.query.v as string) || 'quizzes'
+      const qId = Number(router.query.quiz) || null
+      const qAttempt = router.query.attempt ? Number(router.query.attempt) : null
+      const qReview = router.query.mode === 'review'
+
+      if (view !== qView) setView(qView)
+      if (activeQuizId !== qId) setActiveQuizId(qId)
+      if (activeAttemptId !== qAttempt) setActiveAttemptId(qAttempt)
+      if (isReviewing !== qReview) setIsReviewing(qReview)
+    }
+  }, [router.query, router.isReady]) // Listen to query changes
+
+  // 3. Helper to update URL
+  // We no longer update state here manually; we let the useEffect above
+  // handle it once the URL transition is processed by Next.js.
+  const navigate = (
+    params: {
+      v?: string,
+      quiz?: number | null,
+      attempt?: number | null,
+      mode?: string | null
+    }
+  ) => {
+    const newQuery = { ...router.query, ...params }
+    const cleanedQuery = Object.fromEntries(
+      Object.entries(newQuery).filter(([_, value]) => value != null)
+    );
+    router.push({ query: cleanedQuery }, undefined, { shallow: true })
+  }
+
   const resetQuizState = () => {
-    setActiveQuizId(null)
-    setActiveAttemptId(null)
-    setIsReviewing(false)
+    navigate({ quiz: null, attempt: null, mode: null })
   }
 
   return (
@@ -77,9 +109,8 @@ export default function Home() {
              isOpen={isSidebarOpen}
              onClose={() => setIsSidebarOpen(false)}
              currentView={view}
-              onChangeView={(v) => {
-                setView(v)
-                resetQuizState()
+              onChangeView={(v: string) => {
+                navigate({ v, quiz: null, attempt: null, mode: null })
                 setIsSidebarOpen(false) // Close sidebar on mobile after selection
               }}
             />
@@ -103,15 +134,11 @@ export default function Home() {
               {view === 'quizzes' && !activeQuizId && (
                 <QuizList
                   onSelectQuiz={(id, attemptId) => {
-                    setActiveQuizId(id)
                     if (attemptId) {
-                      // Resume/Review existing attempt
-                      setActiveAttemptId(attemptId)
-                      setIsReviewing(true)
+                      navigate({ quiz: id, attempt: attemptId, mode: 'review' })
                     } else {
                       // Start New
-                      setActiveAttemptId(null)
-                      setIsReviewing(false)
+                      navigate({ quiz: id, attempt: null, mode: null })
                     }
                   }}
                 />
@@ -130,9 +157,8 @@ export default function Home() {
               {view === 'quizzes' && activeQuizId && !isReviewing && (
                 <QuizRunner
                   quizId={activeQuizId}
-                  onFinish={(newAttemptId) => {
-                    setActiveAttemptId(newAttemptId)
-                    setIsReviewing(true)
+                  onFinish={(attemptId) => {
+                    navigate({ attempt: attemptId, mode: 'review' })
                   }}
                 />
               )}
