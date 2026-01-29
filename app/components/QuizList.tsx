@@ -23,6 +23,18 @@ export default function QuizList({ onSelectQuiz }: QuizListProps) {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const { trackJob } = useQuizJob();
+  const [resumableQuizzes, setResumableQuizzes] = useState<Record<number, boolean>>({})
+
+  // Check for in-progress quizzes in localStorage
+  useEffect(() => {
+    const progressMap: Record<number, boolean> = {}
+    quizzes.forEach(q => {
+      if (localStorage.getItem(`quiz_progress_${q.id}`)) {
+        progressMap[q.id] = true
+      }
+    })
+    setResumableQuizzes(progressMap)
+  }, [quizzes])
 
   const fetchQuizzes = async () => {
     // 1. Fetch Quizzes with their Attempts (History)
@@ -199,9 +211,12 @@ export default function QuizList({ onSelectQuiz }: QuizListProps) {
               {quiz.status === 'ready' && (
                 <button
                   onClick={() => onSelectQuiz(quiz.id)}
-                  className="text-sm border border-gray-300 px-3 py-1 rounded hover:bg-gray-50 text-gray-700 transition-colors"
+                  className={`text-sm border px-3 py-1 rounded transition-colors
+                    ${resumableQuizzes[quiz.id]
+                      ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
                 >
-                  Start New
+                  {resumableQuizzes[quiz.id] ? 'Resume' : 'Start New'}
                 </button>
               )}
               </div>
