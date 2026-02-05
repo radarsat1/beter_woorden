@@ -21,6 +21,9 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  // New state for hints
+  const [showHint, setShowHint] = useState(false)
+
   const inputRef = useRef<HTMLInputElement>(null)
 
   const CONTENT_KEY = `quiz_content_${quizId}`
@@ -62,7 +65,7 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
     }
 
     if (user) loadQuiz()
-  }, [quizId, user]) // Keep quizId here so it re-runs if the URL changes
+  }, [quizId, user, CONTENT_KEY, PROGRESS_KEY]) // Keep quizId here so it re-runs if the URL changes
 
   // Persist progress whenever responses or currentIndex change
   useEffect(() => {
@@ -72,9 +75,11 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
         currentIndex
       }))
     }
-  }, [responses, currentIndex, loading, PROGRESS_KEY])
+  }, [responses, currentIndex, loading, PROGRESS_KEY, questions.length])
 
+  // Reset hint and focus input whenever the question changes
   useEffect(() => {
+    setShowHint(false)
     if (!loading && inputRef.current) {
       inputRef.current.focus()
     }
@@ -263,14 +268,27 @@ export default function QuizRunner({ quizId, onFinish }: QuizRunnerProps) {
       <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
 
-        <div className="flex justify-between items-center mb-6">
-          <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+        <div className="flex justify-between items-start mb-6">
+          <div className="text-xs font-bold text-gray-400 uppercase tracking-widest pt-1">
             Question {currentIndex + 1} / {questions.length}
           </div>
+
           {currentQ.english && (
-             <div className="text-xs text-gray-400 italic max-w-xs text-right truncate" title={currentQ.english}>
-               Hint: {currentQ.english}
-             </div>
+            <button
+              type="button"
+              onClick={() => setShowHint(!showHint)}
+              className={`
+                text-xs font-medium px-3 py-1.5 rounded-full transition-all duration-200
+                flex items-center gap-2 max-w-[200px] md:max-w-xs
+                ${showHint
+                  ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}
+              `}
+            >
+              <span className={showHint ? 'italic' : 'uppercase tracking-tighter'}>
+                {showHint ? currentQ.english : 'Hint'}
+              </span>
+            </button>
           )}
         </div>
 
