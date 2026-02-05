@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from '@/components/AuthProvider'
 import Sidebar from '@/components/Sidebar'
+import Intro from '@/components/Intro'
 import WordListEditor from '@/components/WordListEditor'
 import QuizList from '@/components/QuizList'
 import QuizRunner from '@/components/QuizRunner'
@@ -29,7 +30,7 @@ export default function DashboardPage() {
   // Continuous Sync: URL -> State (Handles Back Button & Direct Links)
   useEffect(() => {
     if (router.isReady && user) {
-      const qView = (router.query.v as string) || 'quizzes'
+      const qView = (router.query.v as string) || 'intro'
       const qId = Number(router.query.id) || null
       const qAttempt = Number(router.query.attempt) || null
       const qReview = router.query.mode === 'review'
@@ -96,6 +97,9 @@ export default function DashboardPage() {
         </div>
 
         <main className="flex-1 h-full flex flex-col overflow-y-auto bg-gray-50 pt-16 md:pt-0">
+          {/* VIEW: INTRO */}
+          {view === 'intro' && <Intro />}
+
           {/* VIEW: WORD LISTS */}
           {view === 'wordlists' && <WordListEditor />}
 
