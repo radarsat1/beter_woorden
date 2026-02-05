@@ -114,10 +114,10 @@ export default function QuizList({ onSelectQuiz }: QuizListProps) {
             {remainingLists.length > 0 && (
               <div className="relative" ref={dropdownRef}>
                 <button onClick={() => setShowMore(!showMore)} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${hiddenSelectedCount > 0 ? 'bg-blue-100 border-blue-200 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-600'}`}>
-                  {hiddenSelectedCount > 0 ? `+${hiddenSelectedCount} more` : 'More...'}
+                {hiddenSelectedCount > 0 ? `+${hiddenSelectedCount}` : '...'}
                 </button>
                 {showMore && (
-                  <div className="absolute left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-2 max-h-64 overflow-y-auto">
+                  <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-2 max-h-64 overflow-y-auto">
                     {remainingLists.map(list => (
                       <label key={list.id} className="flex items-center space-x-3 p-2 rounded hover:bg-gray-50 cursor-pointer group">
                         <input type="checkbox" checked={selectedLists.includes(list.id)} onChange={() => toggleList(list.id)} className="h-4 w-4 rounded border-gray-300 text-blue-600" />
