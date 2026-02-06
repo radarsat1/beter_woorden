@@ -186,8 +186,13 @@ export default function QuizList({ onSelectQuiz }: QuizListProps) {
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-gray-500 mb-3">
                     <span className="shrink-0">{new Date(quiz.created_at).toLocaleDateString()}</span>
                     <span>•</span>
-                    <span className="capitalize shrink-0">{quiz.context?.type || 'Article'}</span>
-
+                    {quiz.context?.url && (
+                      <a href={quiz.context.url} className="hover:underline" target="_blank">
+                        <span className="capitalize">{quiz.context?.type || 'Article'}</span>
+                      </a>
+                    ) || (
+                      <span className="capitalize">{quiz.context?.type || 'Article'}</span>
+                    )}
                     {sourceLists.length > 0 && (
                       <div className="flex flex-wrap gap-1 border-l pl-3 border-gray-200">
                         {sourceLists.map((name: string, i: number) => (
